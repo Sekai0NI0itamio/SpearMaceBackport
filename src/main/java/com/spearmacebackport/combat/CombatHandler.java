@@ -186,7 +186,7 @@ public class CombatHandler {
                         WIND_BURST_RADIUS, WIND_BURST_MULTIPLIER[Math.min(windBurst, 3)], false, null);
             } else {
                 SMASH_IMPACTS.put(attacker.getUniqueID(), new SmashRecord(attacker.posY,
-                        event.getEntityLiving().onGround(), attacker.world.getTotalWorldTime()));
+                        event.getEntityLiving().onGround, attacker.world.getTotalWorldTime()));
             }
             smashKnockback(attacker, event.getEntityLiving(), fallen);
             spawnSmashParticles(attacker, event.getEntityLiving());
@@ -210,22 +210,18 @@ public class CombatHandler {
             if (isSmashImmune(attacker, victim, nearby)) {
                 continue;
             }
-            double dist = victim.getDistanceToEntity(nearby);
-            if (dist > radius) {
-                continue;
-            }
-            double resist = nearby.getEntityAttribute(
-                    SharedMonsterAttributes.KNOCKBACK_RESISTANCE).getAttributeValue();
-            double power = (radius - dist) * 0.7D * (fallen > 5.0F ? 2.0D : 1.0D)
-                    * Math.max(0.0D, 1.0D - resist);
-            if (power <= 0.0D) {
-                continue;
-            }
             double dx = nearby.posX - victim.posX;
             double dy = nearby.posY - victim.posY;
             double dz = nearby.posZ - victim.posZ;
             double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            if (len < 0.001D) {
+            if (len < 0.001D || len > radius) {
+                continue;
+            }
+            double resist = nearby.getEntityAttribute(
+                    SharedMonsterAttributes.KNOCKBACK_RESISTANCE).getAttributeValue();
+            double power = (radius - len) * 0.7D * (fallen > 5.0F ? 2.0D : 1.0D)
+                    * Math.max(0.0D, 1.0D - resist);
+            if (power <= 0.0D) {
                 continue;
             }
             nearby.motionX += dx / len * power;
@@ -237,11 +233,12 @@ public class CombatHandler {
 
     private static boolean isSmashImmune(EntityPlayer attacker, EntityLivingBase victim,
             EntityLivingBase nearby) {
-        if (nearby == attacker || nearby == victim || nearby.isSpectator()
-                || attacker.isAlliedTo(nearby)) {
+        if (nearby == attacker || nearby == victim
+                || nearby instanceof EntityPlayer && ((EntityPlayer) nearby).isSpectator()
+                || attacker.isOnSameTeam(nearby)) {
             return true;
         }
-        if (nearby instanceof EntityArmorStand && ((EntityArmorStand) nearby).isMarker()) {
+        if (nearby instanceof EntityArmorStand && ((EntityArmorStand) nearby).hasMarker()) {
             return true;
         }
         if (nearby instanceof EntityPlayer) {
@@ -252,7 +249,7 @@ public class CombatHandler {
         }
         if (nearby instanceof EntityTameable) {
             EntityTameable tame = (EntityTameable) nearby;
-            if (tame.isTame() && tame.isOwner(victim)) {
+            if (tame.isTamed() && tame.isOwner(victim)) {
                 return true;
             }
         }
@@ -273,7 +270,7 @@ public class CombatHandler {
         double y = victim.posY + victim.height * 0.5D;
         double z = victim.posZ;
         boolean heavy = attacker.fallDistance > 5.0F;
-        boolean grounded = victim.onGround();
+        boolean grounded = victim.onGround;
         ws.playSound(null, x, y, z, SoundEvents.ENTITY_GENERIC_EXPLODE,
                 SoundCategory.BLOCKS, grounded ? (heavy ? 1.0F : 0.7F) : 0.5F,
                 grounded ? (heavy ? 0.9F : 1.2F) : 1.6F);

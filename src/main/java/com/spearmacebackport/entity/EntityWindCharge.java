@@ -89,9 +89,9 @@ public class EntityWindCharge extends EntityThrowable {
             double y = result.hitVec.y;
             double z = result.hitVec.z;
             if (result.sideHit != null) {
-                x += result.sideHit.getFrontOffsetX() * 0.25D;
-                y += result.sideHit.getFrontOffsetY() * 0.25D;
-                z += result.sideHit.getFrontOffsetZ() * 0.25D;
+                x += result.sideHit.getXOffset() * 0.25D;
+                y += result.sideHit.getYOffset() * 0.25D;
+                z += result.sideHit.getZOffset() * 0.25D;
             }
             burst(this.world, x, y, z, BURST_RADIUS, KNOCKBACK_MULTIPLIER, true, this);
         } else {
