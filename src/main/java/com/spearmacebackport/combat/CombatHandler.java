@@ -240,7 +240,7 @@ public class CombatHandler {
         }
         double closing = closingSpeed(player, targets.get(0));
         boolean charge = closing >= CHARGE_DAMAGE_GATE;
-        int sharp = EnchantmentHelper.getModifierForCreature(held,
+        float sharp = EnchantmentHelper.getModifierForCreature(held,
                 targets.get(0).getCreatureAttribute());
         boolean hurtAny = false;
         for (EntityLivingBase target : targets) {
@@ -344,8 +344,8 @@ public class CombatHandler {
         }
         final Vec3d finalEye = eye;
         hits.sort((a, b) -> Double.compare(
-                a.getEntityBoundingBox().getCenter().subtract(finalEye).lengthVector(),
-                b.getEntityBoundingBox().getCenter().subtract(finalEye).lengthVector()));
+                a.getEntityBoundingBox().getCenter().distanceTo(finalEye),
+                b.getEntityBoundingBox().getCenter().distanceTo(finalEye)));
         return hits;
     }
 
