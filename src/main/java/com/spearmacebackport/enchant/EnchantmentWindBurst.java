@@ -38,14 +38,4 @@ public class EnchantmentWindBurst extends Enchantment {
     public boolean canApply(ItemStack stack) {
         return stack.getItem() instanceof ItemMace;
     }
-
-    @Override
-    public boolean canApplyAtEnchantingTable(ItemStack stack) {
-        return false;
-    }
-
-    @Override
-    public boolean canApplyAtAnvil(ItemStack stack) {
-        return canApply(stack);
-    }
 }

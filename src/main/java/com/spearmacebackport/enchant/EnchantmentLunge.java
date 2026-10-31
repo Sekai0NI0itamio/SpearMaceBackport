@@ -33,9 +33,4 @@ public class EnchantmentLunge extends Enchantment {
     public boolean canApply(ItemStack stack) {
         return stack.getItem() instanceof ItemDiamondSpear;
     }
-
-    @Override
-    public boolean canApplyAtEnchantingTable(ItemStack stack) {
-        return canApply(stack);
-    }
 }

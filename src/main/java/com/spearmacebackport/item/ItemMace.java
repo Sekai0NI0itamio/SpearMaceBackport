@@ -21,7 +21,7 @@ public class ItemMace extends Item {
 
     public ItemMace() {
         setRegistryName(SpearMaceBackportMod.MOD_ID, "mace");
-        setUnlocalizedName(SpearMaceBackportMod.MOD_ID + ".mace");
+        setTranslationKey(SpearMaceBackportMod.MOD_ID + ".mace");
         setMaxStackSize(1);
         setMaxDamage(500);
         setCreativeTab(CreativeTabs.COMBAT);

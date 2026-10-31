@@ -19,6 +19,9 @@ import java.util.UUID;
 
 @Mod.EventBusSubscriber(modid = SpearMaceBackportMod.MOD_ID)
 public class ModItems {
+    public static final UUID ATTACK_DAMAGE_UUID = UUID.fromString("CB3F55D3-645C-4F38-A497-9C13A33DB5CF");
+    public static final UUID ATTACK_SPEED_UUID = UUID.fromString("FA233E1C-4180-4865-B01B-BCCE9785ACA3");
+
     public static final List<Item> ALL = new ArrayList<>();
 
     public static final ItemMace MACE = new ItemMace();
@@ -29,7 +32,7 @@ public class ModItems {
     private static Item single(String name, int stack) {
         Item item = new Item().setMaxStackSize(stack).setCreativeTab(CreativeTabs.MISC);
         item.setRegistryName(SpearMaceBackportMod.MOD_ID, name);
-        item.setUnlocalizedName(SpearMaceBackportMod.MOD_ID + "." + name);
+        item.setTranslationKey(SpearMaceBackportMod.MOD_ID + "." + name);
         ALL.add(item);
         return item;
     }
@@ -44,9 +47,9 @@ public class ModItems {
     static Multimap<String, AttributeModifier> weaponModifiers(double damage, double speed) {
         Multimap<String, AttributeModifier> map = HashMultimap.create();
         map.put(SharedMonsterAttributes.ATTACK_DAMAGE.getName(),
-                new AttributeModifier(Item.ATTACK_DAMAGE_MODIFIER, "Weapon modifier", damage, 0));
+                new AttributeModifier(ATTACK_DAMAGE_UUID, "Weapon modifier", damage, 0));
         map.put(SharedMonsterAttributes.ATTACK_SPEED.getName(),
-                new AttributeModifier(Item.ATTACK_SPEED_MODIFIER, "Weapon modifier", speed, 0));
+                new AttributeModifier(ATTACK_SPEED_UUID, "Weapon modifier", speed, 0));
         return map;
     }
 

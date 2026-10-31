@@ -24,7 +24,7 @@ public class ItemDiamondSpear extends Item {
 
     public ItemDiamondSpear() {
         setRegistryName(SpearMaceBackportMod.MOD_ID, "diamond_spear");
-        setUnlocalizedName(SpearMaceBackportMod.MOD_ID + ".diamond_spear");
+        setTranslationKey(SpearMaceBackportMod.MOD_ID + ".diamond_spear");
         setMaxStackSize(1);
         setMaxDamage(1561);
         setCreativeTab(CreativeTabs.COMBAT);
