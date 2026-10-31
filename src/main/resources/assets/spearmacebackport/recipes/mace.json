@@ -1,15 +1,9 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "pattern": [
-    "H",
-    "R",
-    "S"
+  "type": "minecraft:crafting_shapeless",
+  "ingredients": [
+    { "item": "spearmacebackport:heavy_core" },
+    { "item": "spearmacebackport:breeze_rod" }
   ],
-  "key": {
-    "H": { "item": "spearmacebackport:heavy_core" },
-    "R": { "item": "spearmacebackport:breeze_rod" },
-    "S": { "item": "minecraft:stick" }
-  },
   "result": {
     "item": "spearmacebackport:mace",
     "count": 1

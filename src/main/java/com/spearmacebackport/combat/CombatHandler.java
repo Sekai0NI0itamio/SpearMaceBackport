@@ -12,6 +12,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
+import net.minecraft.init.MobEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.util.DamageSource;
@@ -41,20 +42,28 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Modern combat backport core.
- * Mace smash: +3 damage per fallen block (scaled by 1.12 attack cooldown),
- * Density +1/block/level, Breach +15% smash damage/level (1.12 armor-model
- * approximation), Wind Burst vertical launch, smash negates accumulated fall.
- * Spear: 2-4.5 reach jab on right-click, sprint charge scaling, Lunge bonus,
- * soft sub-2-block dead zone. Easy-swap: a sword hit followed by a mace
- * smash within 1.0s applies BOTH hits without vanilla attribute swapping.
+ * Modern combat backport core. All numbers are the Java Edition engine values:
+ * mace base 6, speed 0.6, smash tiers +4/+2/+1 per fallen block (full fall
+ * distance, triggers at >=1.5), Density +0.5/block/level, Breach -15% armor
+ * effectiveness/level, Wind Burst 8 blocks of height/level, smash ignores
+ * attack cooldown and is usually a (vanilla) crit. Diamond spear: jab 4 at
+ * 1.05s meter, range 2-4.5, hard 2-block dead zone, never crits; charge is
+ * floor(closingSpeed x 1.075) + 4 + Sharpness with 4.6/5.1 block/s gates;
+ * Lunge propels 0.458 blocks/tick/level on jab for 1 durability + hunger.
+ * Easy-swap: a sword hit followed by a mace smash within 1.0s applies BOTH
+ * hits without vanilla attribute swapping. Backport limits (documented in
+ * README): no hold-to-charge stages/dismount, single charge damage roll.
  */
 @Mod.EventBusSubscriber(modid = SpearMaceBackportMod.MOD_ID)
 public class CombatHandler {
     public static final long SWAP_WINDOW_MS = 1000L;
-    private static final double SMASH_PER_BLOCK = 3.0D;
-    private static final double DENSITY_PER_BLOCK = 1.0D;
+    private static final double DENSITY_PER_BLOCK_PER_LEVEL = 0.5D;
     private static final double BREACH_FRACTION_PER_LEVEL = 0.15D;
+    private static final double[] WIND_BURST_VELOCITY = {0.0D, 1.289D, 1.873D, 2.349D};
+    private static final double CHARGE_DAMAGE_GATE = 4.6D;
+    private static final double CHARGE_KNOCKBACK_GATE = 5.1D;
+    private static final double DIAMOND_CHARGE_MULT = 1.075D;
+    private static final double LUNGE_BLOCKS_PER_TICK_PER_LEVEL = 0.458D;
 
     private static final Map<UUID, SwapMemory> LAST_SWORD_HIT = new HashMap<>();
     private static final Map<UUID, Long> LAST_SMASH_MS = new HashMap<>();
@@ -97,24 +106,31 @@ public class CombatHandler {
     }
 
     private static void handleMaceHit(LivingHurtEvent event, EntityPlayer attacker, ItemStack held) {
-        float strength = attacker.getCooledAttackStrength(0.5F);
+        int breach = EnchantmentHelper.getEnchantmentLevel(ModEnchants.BREACH, held);
         if (isSmash(attacker)) {
-            float fallen = Math.max(0.0F, attacker.fallDistance - 1.5F);
+            float fallen = attacker.fallDistance;
             int density = EnchantmentHelper.getEnchantmentLevel(ModEnchants.DENSITY, held);
-            int breach = EnchantmentHelper.getEnchantmentLevel(ModEnchants.BREACH, held);
             int windBurst = EnchantmentHelper.getEnchantmentLevel(ModEnchants.WIND_BURST, held);
 
-            double bonus = fallen * (SMASH_PER_BLOCK + DENSITY_PER_BLOCK * density);
-            bonus *= strength;
+            // Engine tiers: +4 for each of the first 3 blocks, +2 for the next
+            // 5, +1 beyond; Density adds +0.5 per block per level. Smash
+            // ignores attack cooldown (MC-270160, Works As Intended); the usual
+            // falling crit is applied by vanilla itself (x1.5).
+            double first = Math.min(fallen, 3.0D);
+            double second = Math.min(Math.max(fallen - 3.0D, 0.0D), 5.0D);
+            double rest = Math.max(fallen - 8.0D, 0.0D);
+            double bonus = first * 4.0D + second * 2.0D + rest
+                    + fallen * DENSITY_PER_BLOCK_PER_LEVEL * density;
             event.setAmount(event.getAmount() + (float) bonus);
             if (breach > 0) {
-                applyBreach(event, attacker, held, breach);
+                applyBreach(event, breach);
             }
 
             if (windBurst > 0) {
-                attacker.motionY = 0.9D + 0.35D * windBurst;
+                attacker.motionY = WIND_BURST_VELOCITY[Math.min(windBurst, 3)];
                 attacker.velocityChanged = true;
             }
+            smashKnockback(attacker, event.getEntityLiving(), fallen);
             attacker.fallDistance = 0.0F;
             LAST_SMASH_MS.put(attacker.getUniqueID(), System.currentTimeMillis());
 
@@ -124,6 +140,21 @@ public class CombatHandler {
                     && memory.victimId == event.getEntityLiving().getEntityId()) {
                 event.setAmount(event.getAmount() + memory.damage);
             }
+        } else if (breach > 0) {
+            applyBreach(event, breach);
+        }
+    }
+
+    private static void smashKnockback(EntityPlayer attacker, EntityLivingBase victim, float fallen) {
+        double strength = fallen > 5.0F ? 1.4D : 0.8D;
+        for (EntityLivingBase nearby : attacker.world.getEntitiesWithinAABB(EntityLivingBase.class,
+                attacker.getEntityBoundingBox().grow(2.5D))) {
+            if (nearby == attacker || nearby == victim
+                    || attacker.equals(nearby.getRidingEntity())) {
+                continue;
+            }
+            nearby.knockBack(attacker, (float) strength,
+                    attacker.posX - nearby.posX, attacker.posZ - nearby.posZ);
         }
     }
 
@@ -132,8 +163,7 @@ public class CombatHandler {
      * level, then top up the pre-armor amount so the post-armor result matches
      * a hit against that reduced armor (via vanilla CombatRules).
      */
-    private static void applyBreach(LivingHurtEvent event, EntityPlayer attacker,
-                                    ItemStack held, int breach) {
+    private static void applyBreach(LivingHurtEvent event, int breach) {
         EntityLivingBase victim = event.getEntityLiving();
         float armor = (float) victim.getTotalArmorValue();
         if (armor <= 0.0F) {
@@ -155,10 +185,23 @@ public class CombatHandler {
     }
 
     private static void handleSpearMelee(LivingHurtEvent event, EntityPlayer attacker) {
-        double distance = attacker.getDistance(event.getEntityLiving());
-        if (distance < ItemDiamondSpear.MIN_REACH) {
-            event.setAmount(event.getAmount() * 0.25F);
+        // Hard 2-block dead zone: the spear cannot touch anything closer.
+        if (attacker.getDistance(event.getEntityLiving()) < ItemDiamondSpear.MIN_REACH) {
+            event.setAmount(0.0F);
+            event.setCanceled(true);
+            return;
         }
+        // Spears never land critical hits (MC-302782, Works As Intended):
+        // strip the x1.5 vanilla applies to a falling attack.
+        if (isVanillaCrit(attacker, event.getEntityLiving())) {
+            event.setAmount(event.getAmount() * (1.0F / 1.5F));
+        }
+    }
+
+    private static boolean isVanillaCrit(EntityPlayer attacker, EntityLivingBase target) {
+        return attacker.fallDistance > 0.0F && !attacker.onGround && !attacker.isOnLadder()
+                && !attacker.isInWater() && !attacker.isPotionActive(MobEffects.BLINDNESS)
+                && attacker.getRidingEntity() == null;
     }
 
     @SubscribeEvent
@@ -186,36 +229,82 @@ public class CombatHandler {
         if (held.isEmpty() || !(held.getItem() instanceof ItemDiamondSpear)) {
             return;
         }
-        if (player.getCooldownTracker().hasCooldown(held.getItem())) {
+        // The jab demands a fully charged attack meter, exactly like modern.
+        if (player.getCooledAttackStrength(0.5F) < 1.0F) {
             return;
         }
-        int lunge = EnchantmentHelper.getEnchantmentLevel(ModEnchants.LUNGE, held);
-        double reach = ItemDiamondSpear.MAX_REACH + lunge * 0.25D;
-        reach = Math.min(reach, blockLimitedReach(player, reach));
-        EntityLivingBase target = raycastLiving(player, reach);
-        if (target == null) {
+        double reach = blockLimitedReach(player, ItemDiamondSpear.MAX_REACH);
+        List<EntityLivingBase> targets = raycastLiving(player, reach);
+        if (targets.isEmpty()) {
             return;
         }
-        double distance = player.getDistance(target);
-        float damage = (float) ItemDiamondSpear.BASE_DAMAGE;
-        if (distance < ItemDiamondSpear.MIN_REACH) {
-            damage *= 0.25F;
+        double closing = closingSpeed(player, targets.get(0));
+        boolean charge = closing >= CHARGE_DAMAGE_GATE;
+        int sharp = EnchantmentHelper.getModifierForCreature(held,
+                targets.get(0).getCreatureAttribute());
+        boolean hurtAny = false;
+        for (EntityLivingBase target : targets) {
+            if (player.getDistance(target) < ItemDiamondSpear.MIN_REACH) {
+                continue;
+            }
+            float damage;
+            if (charge) {
+                // Kinetic model: floor(closing speed x tier multiplier) + base + Sharpness.
+                damage = (float) Math.floor(closing * DIAMOND_CHARGE_MULT)
+                        + (float) ItemDiamondSpear.BASE_DAMAGE + sharp;
+                if (closing >= CHARGE_KNOCKBACK_GATE) {
+                    target.knockBack(player, 1.0F,
+                            player.posX - target.posX, player.posZ - target.posZ);
+                }
+            } else {
+                damage = (float) ItemDiamondSpear.BASE_DAMAGE + sharp;
+            }
+            if (target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage)) {
+                hurtAny = true;
+            }
         }
-        double blocksPerSecond = Math.sqrt(player.motionX * player.motionX
-                + player.motionZ * player.motionZ) * 20.0D;
-        if (player.isSprinting() || blocksPerSecond > 3.0D) {
-            damage += Math.min(6.0F, (float) (blocksPerSecond * 0.35D)) + lunge * 1.5F;
-            target.knockBack(player, 0.6F + 0.2F * lunge,
-                    player.posX - target.posX, player.posZ - target.posZ);
-        }
-        damage += EnchantmentHelper.getModifierForCreature(held, target.getCreatureAttribute());
-        boolean hurt = target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage);
-        if (hurt) {
+        if (hurtAny) {
             held.damageItem(1, player);
-            player.getCooldownTracker().setCooldown(held.getItem(), 21);
+            if (!charge) {
+                fireLunge(player, held);
+            }
+            // Spend the attack meter, mirroring a fully charged swing.
+            player.resetCooldown();
             player.swingArm(event.getHand());
         }
         event.setCanceled(true);
+    }
+
+    private static double closingSpeed(EntityPlayer player, EntityLivingBase target) {
+        Vec3d look = player.getLook(1.0F);
+        double attackerForward = player.motionX * look.x + player.motionY * look.y
+                + player.motionZ * look.z;
+        if (attackerForward < 0.0D) {
+            return 0.0D;
+        }
+        double relX = player.motionX - target.motionX;
+        double relY = player.motionY - target.motionY;
+        double relZ = player.motionZ - target.motionZ;
+        return Math.max(0.0D, (relX * look.x + relY * look.y + relZ * look.z) * 20.0D);
+    }
+
+    private static void fireLunge(EntityPlayer player, ItemStack held) {
+        int lunge = EnchantmentHelper.getEnchantmentLevel(ModEnchants.LUNGE, held);
+        if (lunge <= 0 || player.getRidingEntity() != null || player.isElytraFlying()
+                || player.isInWater() || player.getFoodStats().getFoodLevel() < 7) {
+            return;
+        }
+        Vec3d look = player.getLook(1.0F);
+        double horizontal = Math.sqrt(look.x * look.x + look.z * look.z);
+        if (horizontal < 1.0E-4D) {
+            return;
+        }
+        double speed = LUNGE_BLOCKS_PER_TICK_PER_LEVEL * lunge * (player.onGround ? 1.0D : 1.2D);
+        player.motionX = look.x / horizontal * speed;
+        player.motionZ = look.z / horizontal * speed;
+        player.velocityChanged = true;
+        held.damageItem(1, player);
+        player.addExhaustion(4.0F * lunge);
     }
 
     private static double blockLimitedReach(EntityPlayer player, double reach) {
@@ -229,13 +318,12 @@ public class CombatHandler {
         return reach;
     }
 
-    private static EntityLivingBase raycastLiving(EntityPlayer player, double reach) {
+    private static List<EntityLivingBase> raycastLiving(EntityPlayer player, double reach) {
         Vec3d eye = player.getPositionEyes(1.0F);
         Vec3d look = player.getLook(1.0F);
         AxisAlignedBB box = player.getEntityBoundingBox().grow(reach);
         List<Entity> entities = player.world.getEntitiesWithinAABBExcludingEntity(player, box);
-        EntityLivingBase best = null;
-        double bestAlong = Double.MAX_VALUE;
+        List<EntityLivingBase> hits = new java.util.ArrayList<>();
         for (Entity entity : entities) {
             if (!(entity instanceof EntityLivingBase) || !entity.canBeCollidedWith()) {
                 continue;
@@ -249,13 +337,16 @@ public class CombatHandler {
             }
             Vec3d closest = eye.add(look.scale(along));
             double lateral = closest.distanceTo(center);
-            double allowed = Math.max(target.getAverageEdgeLength() * 0.5D + 0.6D, 1.0D);
-            if (lateral <= allowed && along < bestAlong) {
-                bestAlong = along;
-                best = (EntityLivingBase) entity;
+            double allowed = Math.max(target.getAverageEdgeLength() * 0.5D + 0.125D, 0.6D);
+            if (lateral <= allowed) {
+                hits.add((EntityLivingBase) entity);
             }
         }
-        return best;
+        final Vec3d finalEye = eye;
+        hits.sort((a, b) -> Double.compare(
+                a.getEntityBoundingBox().getCenter().subtract(finalEye).lengthVector(),
+                b.getEntityBoundingBox().getCenter().subtract(finalEye).lengthVector()));
+        return hits;
     }
 
     @SubscribeEvent
@@ -289,6 +380,9 @@ public class CombatHandler {
             if (allowed) {
                 int current = merged.containsKey(ench) ? merged.get(ench) : 0;
                 merged.put(ench, Math.min(Math.max(current, entry.getValue()), ench.getMaxLevel()));
+                if (mace && isMaceExclusiveGroup(ench)) {
+                    stripMaceExclusiveGroup(merged, ench);
+                }
                 changed = true;
             }
         }
@@ -298,6 +392,24 @@ public class CombatHandler {
             event.setCost(5);
             event.setMaterialCost(1);
         }
+    }
+
+    private static boolean isMaceExclusiveGroup(Enchantment ench) {
+        return ench == ModEnchants.DENSITY || ench == ModEnchants.BREACH
+                || isVanilla(ench, "minecraft:smite")
+                || isVanilla(ench, "minecraft:bane_of_arthropods");
+    }
+
+    private static void stripMaceExclusiveGroup(Map<Enchantment, Integer> merged, Enchantment keep) {
+        for (Enchantment existing : new java.util.HashSet<>(merged.keySet())) {
+            if (existing != keep && isMaceExclusiveGroup(existing)) {
+                merged.remove(existing);
+            }
+        }
+    }
+
+    private static boolean isVanilla(Enchantment ench, String id) {
+        return ench.getRegistryName() != null && id.equals(ench.getRegistryName().toString());
     }
 
     private static boolean isSpearAnvilEnchant(Enchantment ench) {

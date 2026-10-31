@@ -4,7 +4,6 @@ import com.google.common.collect.Multimap;
 import com.spearmacebackport.SpearMaceBackportMod;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
-import net.minecraft.init.Items;
 import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -47,6 +46,8 @@ public class ItemMace extends Item {
 
     @Override
     public boolean getIsRepairable(ItemStack toRepair, ItemStack repair) {
-        return ModItems.repairableWith(toRepair, repair, Items.DIAMOND);
+        // Modern maces repair with breeze rods (one rod = 25%); the backport
+        // rod is the 1.12-obtainable stand-in.
+        return ModItems.repairableWith(toRepair, repair, ModItems.BREEZE_ROD);
     }
 }
