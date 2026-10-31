@@ -9,11 +9,13 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.CombatRules;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.storage.loot.LootEntryItem;
@@ -104,8 +106,10 @@ public class CombatHandler {
 
             double bonus = fallen * (SMASH_PER_BLOCK + DENSITY_PER_BLOCK * density);
             bonus *= strength;
-            bonus *= 1.0D + BREACH_FRACTION_PER_LEVEL * breach;
             event.setAmount(event.getAmount() + (float) bonus);
+            if (breach > 0) {
+                applyBreach(event, attacker, held, breach);
+            }
 
             if (windBurst > 0) {
                 attacker.motionY = 0.9D + 0.35D * windBurst;
@@ -123,6 +127,29 @@ public class CombatHandler {
         }
     }
 
+    /**
+     * True Breach semantics: shrink the victim's effective armor by 15% per
+     * level, then top up the pre-armor amount so the post-armor result matches
+     * a hit against that reduced armor (via vanilla CombatRules).
+     */
+    private static void applyBreach(LivingHurtEvent event, EntityPlayer attacker,
+                                    ItemStack held, int breach) {
+        EntityLivingBase victim = event.getEntityLiving();
+        float armor = (float) victim.getTotalArmorValue();
+        if (armor <= 0.0F) {
+            return;
+        }
+        float toughness = (float) victim.getEntityAttribute(
+                SharedMonsterAttributes.ARMOR_TOUGHNESS).getAttributeValue();
+        float reduced = Math.max(0.0F, armor * (1.0F - (float) BREACH_FRACTION_PER_LEVEL * breach));
+        float amount = event.getAmount();
+        float want = CombatRules.getDamageAfterAbsorb(amount, reduced, toughness);
+        float have = CombatRules.getDamageAfterAbsorb(amount, armor, toughness);
+        if (want > have) {
+            event.setAmount(amount + (want - have));
+        }
+    }
+
     private static boolean isSmash(EntityPlayer attacker) {
         return !attacker.onGround && attacker.fallDistance > 1.5F && attacker.motionY < 0.0D;
     }
@@ -136,12 +163,14 @@ public class CombatHandler {
 
     @SubscribeEvent
     public static void onLivingFall(LivingFallEvent event) {
-        if (!(event.getEntityLiving() instanceof EntityPlayer)) {
+        if (event.getEntityLiving().world.isRemote
+                || !(event.getEntityLiving() instanceof EntityPlayer)) {
             return;
         }
         EntityPlayer player = (EntityPlayer) event.getEntityLiving();
         Long smashMs = LAST_SMASH_MS.get(player.getUniqueID());
-        if (smashMs != null && System.currentTimeMillis() - smashMs < 5000L) {
+        if (smashMs != null && System.currentTimeMillis() - smashMs < 1000L
+                && event.getDistance() < 6.0F) {
             event.setCanceled(true);
             LAST_SMASH_MS.remove(player.getUniqueID());
         }
@@ -162,6 +191,7 @@ public class CombatHandler {
         }
         int lunge = EnchantmentHelper.getEnchantmentLevel(ModEnchants.LUNGE, held);
         double reach = ItemDiamondSpear.MAX_REACH + lunge * 0.25D;
+        reach = Math.min(reach, blockLimitedReach(player, reach));
         EntityLivingBase target = raycastLiving(player, reach);
         if (target == null) {
             return;
@@ -171,20 +201,32 @@ public class CombatHandler {
         if (distance < ItemDiamondSpear.MIN_REACH) {
             damage *= 0.25F;
         }
-        double relativeSpeed = player.motionX * player.motionX
-                + player.motionZ * player.motionZ;
-        relativeSpeed = Math.sqrt(relativeSpeed);
-        if (player.isSprinting() || relativeSpeed > 3.0D) {
-            damage += Math.min(6.0F, (float) (relativeSpeed * 1.2D)) + lunge * 1.5F;
+        double blocksPerSecond = Math.sqrt(player.motionX * player.motionX
+                + player.motionZ * player.motionZ) * 20.0D;
+        if (player.isSprinting() || blocksPerSecond > 3.0D) {
+            damage += Math.min(6.0F, (float) (blocksPerSecond * 0.35D)) + lunge * 1.5F;
             target.knockBack(player, 0.6F + 0.2F * lunge,
                     player.posX - target.posX, player.posZ - target.posZ);
         }
         damage += EnchantmentHelper.getModifierForCreature(held, target.getCreatureAttribute());
-        target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage);
-        held.damageItem(1, player);
-        player.getCooldownTracker().setCooldown(held.getItem(), 21);
-        player.swingArm(event.getHand());
+        boolean hurt = target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage);
+        if (hurt) {
+            held.damageItem(1, player);
+            player.getCooldownTracker().setCooldown(held.getItem(), 21);
+            player.swingArm(event.getHand());
+        }
         event.setCanceled(true);
+    }
+
+    private static double blockLimitedReach(EntityPlayer player, double reach) {
+        Vec3d eye = player.getPositionEyes(1.0F);
+        Vec3d end = eye.add(player.getLook(1.0F).scale(reach));
+        net.minecraft.util.math.RayTraceResult hit =
+                player.world.rayTraceBlocks(eye, end, false, true, false);
+        if (hit != null && hit.typeOfHit == net.minecraft.util.math.RayTraceResult.Type.BLOCK) {
+            return Math.min(reach, eye.distanceTo(hit.hitVec));
+        }
+        return reach;
     }
 
     private static EntityLivingBase raycastLiving(EntityPlayer player, double reach) {
@@ -234,6 +276,7 @@ public class CombatHandler {
             return;
         }
         ItemStack out = left.copy();
+        Map<Enchantment, Integer> merged = EnchantmentHelper.getEnchantments(left);
         boolean changed = false;
         for (Map.Entry<Enchantment, Integer> entry : book.entrySet()) {
             Enchantment ench = entry.getKey();
@@ -244,11 +287,13 @@ public class CombatHandler {
                     || (spear && isSpearAnvilEnchant(ench))
                     || (mace && isMaceAnvilEnchant(ench));
             if (allowed) {
-                out.addEnchantment(ench, Math.min(entry.getValue(), ench.getMaxLevel()));
+                int current = merged.containsKey(ench) ? merged.get(ench) : 0;
+                merged.put(ench, Math.min(Math.max(current, entry.getValue()), ench.getMaxLevel()));
                 changed = true;
             }
         }
         if (changed) {
+            EnchantmentHelper.setEnchantments(merged, out);
             event.setOutput(out);
             event.setCost(5);
             event.setMaterialCost(1);
@@ -257,25 +302,26 @@ public class CombatHandler {
 
     private static boolean isSpearAnvilEnchant(Enchantment ench) {
         return ench == ModEnchants.LUNGE
-                || ench.getRegistryName() != null
+                || (ench.getRegistryName() != null
                 && (ench.getRegistryName().toString().startsWith("minecraft:sharpness")
                 || ench.getRegistryName().toString().startsWith("minecraft:smite")
                 || ench.getRegistryName().toString().startsWith("minecraft:bane_of_arthropods")
                 || ench.getRegistryName().toString().startsWith("minecraft:fire_aspect")
                 || ench.getRegistryName().toString().startsWith("minecraft:looting")
+                || ench.getRegistryName().toString().startsWith("minecraft:knockback")
                 || ench.getRegistryName().toString().startsWith("minecraft:unbreaking")
-                || ench.getRegistryName().toString().startsWith("minecraft:mending"));
+                || ench.getRegistryName().toString().startsWith("minecraft:mending")));
     }
 
     private static boolean isMaceAnvilEnchant(Enchantment ench) {
         return ench == ModEnchants.DENSITY || ench == ModEnchants.BREACH
                 || ench == ModEnchants.WIND_BURST
-                || ench.getRegistryName() != null
+                || (ench.getRegistryName() != null
                 && (ench.getRegistryName().toString().startsWith("minecraft:smite")
                 || ench.getRegistryName().toString().startsWith("minecraft:bane_of_arthropods")
                 || ench.getRegistryName().toString().startsWith("minecraft:fire_aspect")
                 || ench.getRegistryName().toString().startsWith("minecraft:unbreaking")
-                || ench.getRegistryName().toString().startsWith("minecraft:mending"));
+                || ench.getRegistryName().toString().startsWith("minecraft:mending")));
     }
 
     @SubscribeEvent
@@ -295,7 +341,7 @@ public class CombatHandler {
                                 new LootCondition[0],
                                 SpearMaceBackportMod.MOD_ID + ":wind_burst_book")
                 },
-                new LootCondition[0], new RandomValueRange(1), new RandomValueRange(0, 1),
+                new LootCondition[0], new RandomValueRange(0, 1), new RandomValueRange(0),
                 SpearMaceBackportMod.MOD_ID + "_loot");
         event.getTable().addPool(pool);
     }

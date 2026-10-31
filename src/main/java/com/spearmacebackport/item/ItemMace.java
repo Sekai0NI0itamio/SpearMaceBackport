@@ -32,7 +32,8 @@ public class ItemMace extends Item {
     public Multimap<String, AttributeModifier> getItemAttributeModifiers(EntityEquipmentSlot slot) {
         Multimap<String, AttributeModifier> map = super.getItemAttributeModifiers(slot);
         if (ModItems.isMainHand(slot)) {
-            map = ModItems.weaponModifiers(BASE_DAMAGE, ATTACK_SPEED_MOD);
+            // Modifier stacks on the player's base 1.0 attack damage: 5.0 + 1.0 = 6.0.
+            map = ModItems.weaponModifiers(BASE_DAMAGE - 1.0D, ATTACK_SPEED_MOD);
         }
         return map;
     }
