@@ -29,13 +29,19 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   wooden doors/trapdoors, fence gates, levers and buttons (never iron);
   dispensers can fire it too.
 - **Breeze Rod** (creative-only) — repair material for the mace.
-- **Diamond Spear** (craftable — the only survival recipe) — jab 4 damage
-  on a full 1.05s attack meter, 1561 durability, 4.5-block reach with a hard
-  2-block dead zone, never crits. Right-click jabs (multi-target,
-  wall-checked); moving at 4.6+ blocks/s closing speed turns it into a
-  kinetic charge: floor(speed × 1.075) + 4 + Sharpness, knockback at 5.1+.
-  Enchant **Lunge** (max 3): every jab propels you 0.458 blocks/tick/level
-  horizontally for 1 durability + hunger. Sword enchants
+- **Diamond Spear** (craftable — the only survival recipe, official Mojang
+  recipe) — official Mojang textures: 16×16 inventory art plus the 32×32
+  in-hand art with the official hold pose (swapped by a held-item model
+  override). Melee swings work like a sword at 4 damage with a hard 2-block
+  dead zone and never crit. Right-click jab hits everything in a 2–4.5
+  block wall-checked line, scaling with the attack meter exactly like a
+  vanilla swing (weak spam-clicks land, full meter lands the full 4 +
+  Sharpness); 1561 durability. Enchant **Lunge** (max 3): successful
+  non-charge jabs propel you 0.458 blocks/tick/level horizontally for 1
+  durability + 4×level hunger (needs food ≥ 7 unless creative, not while
+  riding/gliding/swimming). Sprinting into a jab charges it:
+  floor(closing speed × 1.075) + 4 + Sharpness above 4.6 blocks/s closing
+  speed, with knockback above 5.1. Sword enchants
   (Sharpness/Smite/Bane/Fire Aspect/Knockback/Looting/Unbreaking/Mending)
   via **anvil**; Lunge via table or anvil.
 - **Easy-swap** — land a sword hit, then a mace smash on the same target
@@ -46,8 +52,8 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   End City chests (~50% per chest).
 
 The item textures in this repo are the official Mojang textures (mace, wind
-charge, breeze rod), committed by owner decision in v1.1.0; the legacy
-`tools/apply_official_textures.sh` overlay script is retired.
+charge, breeze rod, diamond spear + in-hand), committed by owner decision;
+the legacy `tools/apply_official_textures.sh` overlay script is retired.
 
 Backport limits: no hold-to-charge stages/mount-dismount, single charge
 damage roll, enchanting-table exclusivity between Density/Breach/Smite/Bane

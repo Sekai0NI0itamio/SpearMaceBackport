@@ -391,10 +391,11 @@ public class CombatHandler {
         if (held.isEmpty() || !(held.getItem() instanceof ItemDiamondSpear)) {
             return;
         }
-        // The jab demands a fully charged attack meter, exactly like modern.
-        if (player.getCooledAttackStrength(0.5F) < 1.0F) {
-            return;
-        }
+        // The jab scales with the attack meter exactly like a vanilla swing
+        // (0.2 + strength^2 x 0.8): spam-clicks land weak stabs, a full meter
+        // lands the full 4. A fully charged swing is NOT required.
+        float strength = player.getCooledAttackStrength(0.5F);
+        float meterScale = 0.2F + strength * strength * 0.8F;
         double reach = blockLimitedReach(player, ItemDiamondSpear.MAX_REACH);
         List<EntityLivingBase> targets = raycastLiving(player, reach);
         if (targets.isEmpty()) {
@@ -419,7 +420,7 @@ public class CombatHandler {
                             player.posX - target.posX, player.posZ - target.posZ);
                 }
             } else {
-                damage = (float) ItemDiamondSpear.BASE_DAMAGE + sharp;
+                damage = ((float) ItemDiamondSpear.BASE_DAMAGE + sharp) * meterScale;
             }
             if (target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage)) {
                 hurtAny = true;
@@ -461,7 +462,8 @@ public class CombatHandler {
     private static void fireLunge(EntityPlayer player, ItemStack held) {
         int lunge = EnchantmentHelper.getEnchantmentLevel(ModEnchants.LUNGE, held);
         if (lunge <= 0 || player.getRidingEntity() != null || player.isElytraFlying()
-                || player.isInWater() || player.getFoodStats().getFoodLevel() < 7) {
+                || player.isInWater()
+                || player.getFoodStats().getFoodLevel() < 7 && !player.capabilities.isCreativeMode) {
             return;
         }
         Vec3d look = player.getLook(1.0F);
@@ -475,6 +477,8 @@ public class CombatHandler {
         player.velocityChanged = true;
         held.damageItem(1, player);
         player.addExhaustion(4.0F * lunge);
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
+                SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.8F, 0.7F);
     }
 
     private static double blockLimitedReach(EntityPlayer player, double reach) {
