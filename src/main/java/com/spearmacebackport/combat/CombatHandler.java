@@ -114,12 +114,11 @@ public class CombatHandler {
             attacker.fallDistance = 0.0F;
             LAST_SMASH_MS.put(attacker.getUniqueID(), System.currentTimeMillis());
 
-            SwapMemory memory = LAST_SWORD_HIT.get(attacker.getUniqueID());
+            SwapMemory memory = LAST_SWORD_HIT.remove(attacker.getUniqueID());
             if (memory != null
                     && System.currentTimeMillis() - memory.timeMs <= SWAP_WINDOW_MS
                     && memory.victimId == event.getEntityLiving().getEntityId()) {
                 event.setAmount(event.getAmount() + memory.damage);
-                LAST_SWORD_HIT.remove(attacker.getUniqueID());
             }
         }
     }
