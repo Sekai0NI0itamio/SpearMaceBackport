@@ -117,11 +117,20 @@ public class EntityWindCharge extends EntityThrowable {
         }
         WorldServer ws = (WorldServer) world;
         ws.spawnParticle(EnumParticleTypes.CLOUD, x, y, z,
-                30, 1.0D, 1.0D, 1.0D, 0.2D);
-        ws.spawnParticle(EnumParticleTypes.SMOKE_LARGE, x, y, z,
-                12, 0.7D, 0.7D, 0.7D, 0.05D);
+                12, 0.4D, 0.4D, 0.4D, 0.1D);
         ws.spawnParticle(EnumParticleTypes.FIREWORKS_SPARK, x, y, z,
-                6, 0.8D, 0.8D, 0.8D, 0.1D);
+                6, 0.6D, 0.6D, 0.6D, 0.1D);
+        for (int i = 0; i < 16; i++) {
+            double angle = (Math.PI * 2.0D * i) / 16.0D;
+            double cos = Math.cos(angle);
+            double sin = Math.sin(angle);
+            ws.spawnParticle(EnumParticleTypes.CLOUD,
+                    x + cos * 0.5D, y + 0.25D, z + sin * 0.5D,
+                    1, 0.0D, 0.0D, 0.0D, 0.0D);
+            ws.spawnParticle(EnumParticleTypes.SMOKE_LARGE,
+                    x + cos * 1.1D, y + 0.45D, z + sin * 1.1D,
+                    1, 0.0D, 0.0D, 0.0D, 0.0D);
+        }
         ws.playSound(null, new BlockPos(x, y, z), SoundEvents.ENTITY_GENERIC_EXPLODE,
                 SoundCategory.BLOCKS, 0.6F, 1.4F);
 

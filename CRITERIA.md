@@ -26,3 +26,10 @@
 - [x] Wind Burst = official 3.5-radius explosion at attacker (multipliers 1.2/1.75/2.2), shoves mobs, no fall protection — evidence: green build 41203505384
 - [x] Wind charge burst: knockback-resistance (not blast protection), no trail particles, +0.25 face-normal block offset, 1.2 radius constant — evidence: green build 41203505384
 - [ ] User retests in game (questions asked 2026-10-31; awaiting observations)
+
+## v1.1.2 change set (2026-10-31) — status: in progress
+
+- [ ] Wind burst particles: two-ring gust snapshot (inner CLOUD ring + outer SMOKE_LARGE ring, center puff + sparks) instead of box-spread cloud
+- [ ] Spear jab feedback: sweep sound + sweep particles on hit so the jab reads in game
+- [ ] Spear/lunge/easy-swap audit: all assets present in jar, all code paths intact
+- [ ] Green cloud build publishes non-empty jar; user retests spear + wind charge

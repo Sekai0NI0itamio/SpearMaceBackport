@@ -433,6 +433,14 @@ public class CombatHandler {
             // Spend the attack meter, mirroring a fully charged swing.
             player.resetCooldown();
             player.swingArm(event.getHand());
+            EntityLivingBase first = targets.get(0);
+            player.world.playSound(null, first.posX, first.posY, first.posZ,
+                    SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 1.0F);
+            if (player.world instanceof WorldServer) {
+                ((WorldServer) player.world).spawnParticle(EnumParticleTypes.SWEEP_ATTACK,
+                        first.posX, first.posY + first.height * 0.5D, first.posZ,
+                        2, 0.3D, 0.3D, 0.3D, 0.0D);
+            }
         }
         event.setCanceled(true);
     }
