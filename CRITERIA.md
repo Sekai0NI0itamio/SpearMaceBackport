@@ -34,10 +34,10 @@
 - [x] Spear/lunge/easy-swap audit: all assets present in jar (class, Lunge class, model, both recipes, texture, lang), all code paths intact — evidence: jar listing + JSON validation
 - [ ] Green cloud build publishes non-empty jar (run 41205677387 `success`, artifact 59412 bytes, local jar 44523 bytes); user retests spear + wind charge
 
-## v1.1.3 change set (2026-10-31) — status: in progress
+## v1.1.3 change set (2026-10-31) — status: done, green build 41206784849
 
-- [ ] Official Mojang spear textures committed (inventory 16×16 + 32×32 in-hand with official hold pose via held-item model override)
-- [ ] Jab scales with attack meter (0.2 + strength^2 x 0.8) instead of demanding a full meter; Lunge creative-food exemption + whoosh sound
-- [ ] Lunge verified byte-exact vs official lunge.json (0.458/level horizontal impulse, +1 damage, 4/level exhaustion, no ride/glide/water, food >= 7)
-- [ ] Jab verified vs official PiercingWeapon.attack (full attribute damage, multi-target wall-checked line, stab scaling, lunge post-effect)
-- [ ] Green cloud build publishes non-empty jar; user retests spear
+- [x] Official Mojang spear textures committed (inventory 16×16 + 32×32 in-hand with official hold pose via held-item model override) — evidence: PNGs in repo (201 + 227 bytes), green build 41206784849
+- [x] Jab scales with attack meter (0.2 + strength^2 x 0.8) instead of demanding a full meter; Lunge creative-food exemption + whoosh sound — evidence: green build 41206784849
+- [x] Lunge verified byte-exact vs official lunge.json (0.458/level horizontal impulse, +1 damage, 4/level exhaustion, no ride/glide/water, food >= 7) — evidence: side-by-side with 26.3 sources
+- [x] Jab verified vs official PiercingWeapon.attack (full attribute damage, multi-target wall-checked line, stab scaling, lunge post-effect) — evidence: side-by-side with 26.3 sources
+- [x] Green cloud build publishes non-empty jar (run 41206784849 `success`); local jar downloaded (1.1.3); user retests spear
