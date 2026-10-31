@@ -18,11 +18,11 @@
 - [x] Mace anvil allowlist = everything modern (Density, Breach, Wind Burst, Smite, Bane, Fire Aspect, Unbreaking, Mending, Curse of Vanishing); exclusivity unchanged — evidence: green build 41200587254
 - [x] Green cloud build publishes non-empty jar; README/CRITERIA/memory updated — evidence: run 41200587254 `success`, artifact `spearmacebackport-jar` 55620 bytes
 
-## v1.1.1 change set (2026-10-31) — status: in progress
+## v1.1.1 change set (2026-10-31) — status: done, green build 41203505384
 
-- [ ] Smash knockback = official 3.5-block formula with exclusion predicate (spectators, allies, tamed-by-victim, marker stands, creative-flyers)
-- [ ] Smash trigger drops the motionY check (official: fallDistance > 1.5, not fall-flying)
-- [ ] Fall protection = impact-height record with 40-tick grace for smash (skipped on Wind Burst) and wind charges; landing dust when the victim was grounded; momentum reset 0.01
-- [ ] Wind Burst = official 3.5-radius explosion at attacker (multipliers 1.2/1.75/2.2), shoves mobs, no fall protection
-- [ ] Wind charge burst: knockback-resistance (not blast protection), no trail particles, +0.25 face-normal block offset, 1.2 radius constant
-- [ ] Green cloud build publishes non-empty jar; user retests in game (see questions)
+- [x] Smash knockback = official 3.5-block formula with exclusion predicate (spectators, allies, tamed-by-victim, marker stands, creative-flyers) — evidence: green build 41203505384
+- [x] Smash trigger drops the motionY check (official: fallDistance > 1.5, not fall-flying) — evidence: green build 41203505384
+- [x] Fall protection = impact-height record with 40-tick grace for smash (skipped on Wind Burst) and wind charges; landing dust when the victim was grounded; momentum reset 0.01 — evidence: green build 41203505384
+- [x] Wind Burst = official 3.5-radius explosion at attacker (multipliers 1.2/1.75/2.2), shoves mobs, no fall protection — evidence: green build 41203505384
+- [x] Wind charge burst: knockback-resistance (not blast protection), no trail particles, +0.25 face-normal block offset, 1.2 radius constant — evidence: green build 41203505384
+- [ ] User retests in game (questions asked 2026-10-31; awaiting observations)
