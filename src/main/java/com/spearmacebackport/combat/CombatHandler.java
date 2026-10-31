@@ -2,6 +2,7 @@ package com.spearmacebackport.combat;
 
 import com.spearmacebackport.SpearMaceBackportMod;
 import com.spearmacebackport.enchant.ModEnchants;
+import com.spearmacebackport.entity.EntityWindCharge;
 import com.spearmacebackport.item.ItemDiamondSpear;
 import com.spearmacebackport.item.ItemMace;
 import com.spearmacebackport.item.ModItems;
@@ -12,6 +13,9 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.item.EntityArmorStand;
+import net.minecraft.entity.passive.EntityTameable;
+import net.minecraft.init.SoundEvents;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
@@ -19,6 +23,7 @@ import net.minecraft.init.MobEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.SoundCategory;
 import net.minecraft.util.CombatRules;
 import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -49,32 +54,39 @@ import java.util.Random;
 import java.util.UUID;
 
 /**
- * Modern combat backport core. All numbers are the Java Edition engine values:
- * mace base 6, speed 0.6, smash tiers +4/+2/+1 per fallen block (full fall
- * distance, triggers at >=1.5), Density +0.5/block/level, Breach -15% armor
- * effectiveness/level, Wind Burst 8 blocks of height/level, smash ignores
- * attack cooldown and is usually a (vanilla) crit. Diamond spear: jab 4 at
- * 1.05s meter, range 2-4.5, hard 2-block dead zone, never crits; charge is
- * floor(closingSpeed x 1.075) + 4 + Sharpness with 4.6/5.1 block/s gates;
- * Lunge propels 0.458 blocks/tick/level on jab for 1 durability + hunger.
- * Easy-swap: a sword hit followed by a mace smash within 1.0s applies BOTH
- * hits without vanilla attribute swapping. Backport limits (documented in
- * README): no hold-to-charge stages/dismount, single charge damage roll.
+ * Modern combat backport core. All numbers are the Java Edition engine values,
+ * read from the official unobfuscated 26.3 sources: mace base 6, speed 0.6,
+ * smash tiers +4/+2/+1 per fallen block (full fall distance, triggers at
+ * >1.5, cooldown ignored per MC-270160), Density +0.5/block/level, Breach -15%
+ * armor effectiveness/level, smash knocks back within 3.5 blocks with the
+ * official (3.5-dist) x 0.7 x high-fall-double formula and a fixed +0.7 lift,
+ * smash resets vertical momentum to 0.01 and records the impact height so
+ * landing only counts fall damage below it. Wind Burst is a 3.5-radius
+ * explosion at the attacker (multipliers 1.2/1.75/2.2, no fall protection);
+ * wind-charge bursts protect players below the burst height the same way.
+ * Diamond spear: jab 4 at 1.05s meter, range 2-4.5, hard 2-block dead zone,
+ * never crits; charge is floor(closingSpeed x 1.075) + 4 + Sharpness with
+ * 4.6/5.1 block/s gates; Lunge propels 0.458 blocks/tick/level on jab for
+ * 1 durability + hunger. Easy-swap: a sword hit followed by a mace smash
+ * within 1.0s applies BOTH hits without vanilla attribute swapping.
+ * Backport limits (documented in README): no hold-to-charge
+ * stages/dismount, single charge damage roll.
  */
 @Mod.EventBusSubscriber(modid = SpearMaceBackportMod.MOD_ID)
 public class CombatHandler {
     public static final long SWAP_WINDOW_MS = 1000L;
     private static final double DENSITY_PER_BLOCK_PER_LEVEL = 0.5D;
     private static final double BREACH_FRACTION_PER_LEVEL = 0.15D;
-    private static final double[] WIND_BURST_VELOCITY = {0.0D, 1.289D, 1.873D, 2.349D};
+    private static final double[] WIND_BURST_MULTIPLIER = {0.0D, 1.2D, 1.75D, 2.2D};
+    private static final double WIND_BURST_RADIUS = 3.5D;
     private static final double CHARGE_DAMAGE_GATE = 4.6D;
     private static final double CHARGE_KNOCKBACK_GATE = 5.1D;
     private static final double DIAMOND_CHARGE_MULT = 1.075D;
     private static final double LUNGE_BLOCKS_PER_TICK_PER_LEVEL = 0.458D;
 
     private static final Map<UUID, SwapMemory> LAST_SWORD_HIT = new HashMap<>();
-    private static final Map<UUID, Long> LAST_SMASH_MS = new HashMap<>();
     private static final Map<UUID, BurstRecord> WIND_BURSTS = new HashMap<>();
+    private static final Map<UUID, SmashRecord> SMASH_IMPACTS = new HashMap<>();
 
     private static final class SwapMemory {
         final long timeMs;
@@ -94,6 +106,18 @@ public class CombatHandler {
 
         BurstRecord(double y, long time) {
             this.y = y;
+            this.time = time;
+        }
+    }
+
+    private static final class SmashRecord {
+        final double y;
+        final boolean groundedVictim;
+        final long time;
+
+        SmashRecord(double y, boolean groundedVictim, long time) {
+            this.y = y;
+            this.groundedVictim = groundedVictim;
             this.time = time;
         }
     }
@@ -151,20 +175,22 @@ public class CombatHandler {
             double bonus = first * 4.0D + second * 2.0D + rest
                     + fallen * DENSITY_PER_BLOCK_PER_LEVEL * density;
             event.setAmount(event.getAmount() + (float) bonus);
-            attacker.motionY = 0.0D;
+            attacker.motionY = 0.01D;
             attacker.velocityChanged = true;
             if (breach > 0) {
                 applyBreach(event, breach);
             }
 
             if (windBurst > 0) {
-                attacker.motionY = WIND_BURST_VELOCITY[Math.min(windBurst, 3)];
-                attacker.velocityChanged = true;
+                EntityWindCharge.burst(attacker.world, attacker.posX, attacker.posY, attacker.posZ,
+                        WIND_BURST_RADIUS, WIND_BURST_MULTIPLIER[Math.min(windBurst, 3)], false, null);
+            } else {
+                SMASH_IMPACTS.put(attacker.getUniqueID(), new SmashRecord(attacker.posY,
+                        event.getEntityLiving().onGround(), attacker.world.getTotalWorldTime()));
             }
             smashKnockback(attacker, event.getEntityLiving(), fallen);
             spawnSmashParticles(attacker, event.getEntityLiving());
             attacker.fallDistance = 0.0F;
-            LAST_SMASH_MS.put(attacker.getUniqueID(), System.currentTimeMillis());
 
             SwapMemory memory = LAST_SWORD_HIT.remove(attacker.getUniqueID());
             if (memory != null
@@ -178,16 +204,59 @@ public class CombatHandler {
     }
 
     private static void smashKnockback(EntityPlayer attacker, EntityLivingBase victim, float fallen) {
-        double strength = fallen > 5.0F ? 1.4D : 0.8D;
+        double radius = 3.5D;
         for (EntityLivingBase nearby : attacker.world.getEntitiesWithinAABB(EntityLivingBase.class,
-                attacker.getEntityBoundingBox().grow(2.5D))) {
-            if (nearby == attacker || nearby == victim
-                    || attacker.equals(nearby.getRidingEntity())) {
+                attacker.getEntityBoundingBox().grow(radius))) {
+            if (isSmashImmune(attacker, victim, nearby)) {
                 continue;
             }
-            nearby.knockBack(attacker, (float) strength,
-                    attacker.posX - nearby.posX, attacker.posZ - nearby.posZ);
+            double dist = victim.getDistanceToEntity(nearby);
+            if (dist > radius) {
+                continue;
+            }
+            double resist = nearby.getEntityAttribute(
+                    SharedMonsterAttributes.KNOCKBACK_RESISTANCE).getAttributeValue();
+            double power = (radius - dist) * 0.7D * (fallen > 5.0F ? 2.0D : 1.0D)
+                    * Math.max(0.0D, 1.0D - resist);
+            if (power <= 0.0D) {
+                continue;
+            }
+            double dx = nearby.posX - victim.posX;
+            double dy = nearby.posY - victim.posY;
+            double dz = nearby.posZ - victim.posZ;
+            double len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            if (len < 0.001D) {
+                continue;
+            }
+            nearby.motionX += dx / len * power;
+            nearby.motionY += 0.7D;
+            nearby.motionZ += dz / len * power;
+            nearby.velocityChanged = true;
         }
+    }
+
+    private static boolean isSmashImmune(EntityPlayer attacker, EntityLivingBase victim,
+            EntityLivingBase nearby) {
+        if (nearby == attacker || nearby == victim || nearby.isSpectator()
+                || attacker.isAlliedTo(nearby)) {
+            return true;
+        }
+        if (nearby instanceof EntityArmorStand && ((EntityArmorStand) nearby).isMarker()) {
+            return true;
+        }
+        if (nearby instanceof EntityPlayer) {
+            EntityPlayer other = (EntityPlayer) nearby;
+            if (other.capabilities.isCreativeMode && other.capabilities.isFlying) {
+                return true;
+            }
+        }
+        if (nearby instanceof EntityTameable) {
+            EntityTameable tame = (EntityTameable) nearby;
+            if (tame.isTame() && tame.isOwner(victim)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -203,6 +272,11 @@ public class CombatHandler {
         double x = victim.posX;
         double y = victim.posY + victim.height * 0.5D;
         double z = victim.posZ;
+        boolean heavy = attacker.fallDistance > 5.0F;
+        boolean grounded = victim.onGround();
+        ws.playSound(null, x, y, z, SoundEvents.ENTITY_GENERIC_EXPLODE,
+                SoundCategory.BLOCKS, grounded ? (heavy ? 1.0F : 0.7F) : 0.5F,
+                grounded ? (heavy ? 0.9F : 1.2F) : 1.6F);
         ws.spawnParticle(EnumParticleTypes.EXPLOSION_LARGE, x, y, z,
                 2, 0.3D, 0.3D, 0.3D, 0.0D);
         ws.spawnParticle(EnumParticleTypes.CLOUD, x, y, z,
@@ -239,7 +313,7 @@ public class CombatHandler {
     }
 
     private static boolean isSmash(EntityPlayer attacker) {
-        return !attacker.onGround && attacker.fallDistance > 1.5F && attacker.motionY < 0.0D;
+        return !attacker.onGround && attacker.fallDistance > 1.5F;
     }
 
     private static void handleSpearMelee(LivingHurtEvent event, EntityPlayer attacker) {
@@ -270,22 +344,43 @@ public class CombatHandler {
         }
         EntityPlayer player = (EntityPlayer) event.getEntityLiving();
         BurstRecord burst = WIND_BURSTS.remove(player.getUniqueID());
-        if (burst != null && player.world.getTotalWorldTime() - burst.time < 200L) {
+        if (burst != null && player.world.getTotalWorldTime() - burst.time < 40L) {
             float adjusted = (float) Math.max(0.0D, burst.y - player.posY);
             event.setDistance(Math.min(event.getDistance(), adjusted));
         }
-        Long smashMs = LAST_SMASH_MS.get(player.getUniqueID());
-        if (smashMs != null && System.currentTimeMillis() - smashMs < 1000L
-                && event.getDistance() < 6.0F) {
-            event.setCanceled(true);
-            LAST_SMASH_MS.remove(player.getUniqueID());
+        SmashRecord smash = SMASH_IMPACTS.remove(player.getUniqueID());
+        if (smash != null && player.world.getTotalWorldTime() - smash.time < 40L) {
+            float fallen = event.getDistance();
+            float adjusted = (float) Math.max(0.0D, smash.y - player.posY);
+            event.setDistance(Math.min(fallen, adjusted));
+            if (smash.groundedVictim) {
+                spawnLandingDust(player, fallen);
+            }
         }
+    }
+
+    private static void spawnLandingDust(EntityPlayer player, float fallen) {
+        if (!(player.world instanceof WorldServer) || fallen <= 0.0F) {
+            return;
+        }
+        WorldServer ws = (WorldServer) player.world;
+        BlockPos below = new BlockPos(player.posX,
+                player.getEntityBoundingBox().minY - 0.2D, player.posZ);
+        IBlockState ground = player.world.getBlockState(below);
+        if (ground.getBlock() == Blocks.AIR) {
+            return;
+        }
+        int count = Math.min((int) (50.0F * fallen), 200);
+        ws.spawnParticle(EnumParticleTypes.BLOCK_CRACK, player.posX,
+                player.getEntityBoundingBox().minY + 0.1D, player.posZ,
+                count, 0.3D, 0.1D, 0.3D, 0.15D, Block.getStateId(ground));
     }
 
     @SubscribeEvent
     public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.player != null) {
             WIND_BURSTS.remove(event.player.getUniqueID());
+            SMASH_IMPACTS.remove(event.player.getUniqueID());
         }
     }
 
