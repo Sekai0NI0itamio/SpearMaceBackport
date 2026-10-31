@@ -3,7 +3,6 @@ package com.spearmacebackport.entity;
 import com.spearmacebackport.combat.CombatHandler;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockButton;
-import net.minecraft.block.BlockButtonWood;
 import net.minecraft.block.BlockDoor;
 import net.minecraft.block.BlockFenceGate;
 import net.minecraft.block.BlockLever;
@@ -70,7 +69,7 @@ public class EntityWindCharge extends EntityThrowable {
         if (this.world.isRemote) {
             if (!this.inGround) {
                 this.world.spawnParticle(EnumParticleTypes.CLOUD,
-                        this.posX, this.posY, this.posZ, 1, 0.05D, 0.05D, 0.05D, 0.0D);
+                        this.posX, this.posY, this.posZ, 0.0D, 0.0D, 0.0D);
             }
         } else if (this.posY > (double) (this.world.getHeight() + 30)) {
             burst(this.posX, this.posY, this.posZ);
@@ -196,10 +195,7 @@ public class EntityWindCharge extends EntityThrowable {
             if (!state.getValue(BlockButton.POWERED)) {
                 this.world.setBlockState(pos, state.withProperty(BlockButton.POWERED, true), 3);
                 this.world.scheduleUpdate(pos, block, block.tickRate(this.world));
-                boolean wood = block instanceof BlockButtonWood;
-                this.world.playSound(null, pos,
-                        wood ? SoundEvents.BLOCK_WOODEN_BUTTON_CLICK_ON
-                                : SoundEvents.BLOCK_STONE_BUTTON_CLICK_ON,
+                this.world.playSound(null, pos, SoundEvents.UI_BUTTON_CLICK,
                         SoundCategory.BLOCKS, 0.6F, 1.0F);
             }
         }
