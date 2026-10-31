@@ -9,11 +9,11 @@
 - [x] Cloud-only: gh used for all runs; no local compile — evidence: Actions history
 - [ ] In-game playtest on 1.12.2 (damage vs armor, fall timing, anvil outputs) — needs a 1.12.2 instance. Open.
 
-## v1.1.0 change set (2026-10-31) — status: in progress
+## v1.1.0 change set (2026-10-31) — status: done, green build 41200587254
 
-- [ ] Official Mojang textures committed for mace, wind_charge, breeze_rod (user override of no-bytes rule), extracted from Mojang CDN 1.21 client jar
-- [ ] Wind charge item: 64-stack, right-click throw, 10-tick cooldown, direct-hit 1 damage, 2.4-block burst (+22% knockback feel, ~6-block self-launch aiming down), fall-damage negation below burst Y, toggles doors/buttons/levers, dispenser-fireable
-- [ ] Mace smash spawns modern-style particles: explosion burst + block-crack dust of the block under a grounded victim (skipped when victim center is in air)
-- [ ] Recipes: spear (both mirror files) stays craftable; mace/breeze_rod/heavy_core recipes deleted; NO wind_charge recipe; heavy_core item/model/lang fully removed
-- [ ] Mace anvil allowlist = everything modern (Density, Breach, Wind Burst, Smite, Bane, Fire Aspect, Unbreaking, Mending, Curse of Vanishing); exclusivity unchanged
-- [ ] Green cloud build publishes non-empty jar; README/CRITERIA/memory updated
+- [x] Official Mojang textures committed for mace, wind_charge, breeze_rod (user override of no-bytes rule), extracted from Mojang CDN 26.3 client jar — evidence: PNGs in repo, 16x16 RGBA, script retired
+- [x] Wind charge item: 64-stack, right-click throw, 10-tick cooldown, direct-hit 1 damage, 2.4-block burst (+22% knockback feel, ~6-block self-launch aiming down), fall-damage negation below burst Y, wooden-only toggles, dispenser-fireable — evidence: green build 41200587254
+- [x] Mace smash spawns modern-style particles: explosion burst + block-crack dust of the block under a grounded victim (skipped when victim center is in air) — evidence: green build 41200587254
+- [x] Recipes: spear (both mirror files) stays craftable; mace/breeze_rod/heavy_core recipes deleted; NO wind_charge recipe; heavy_core item/model/lang fully removed — evidence: recipes/ has only spear files, no heavy_core refs in src/
+- [x] Mace anvil allowlist = everything modern (Density, Breach, Wind Burst, Smite, Bane, Fire Aspect, Unbreaking, Mending, Curse of Vanishing); exclusivity unchanged — evidence: green build 41200587254
+- [x] Green cloud build publishes non-empty jar; README/CRITERIA/memory updated — evidence: run 41200587254 `success`, artifact `spearmacebackport-jar` 55620 bytes
