@@ -1,0 +1,16 @@
+[
+  {
+    "modid": "spearmacebackport",
+    "name": "SpearMaceBackport",
+    "description": "Backport of the modern Mace (smash attack, Density/Breach/Wind Burst) and Diamond Spear (jab + charge, Lunge) to 1.12.2, with a 1s easy-swap dual-hit window.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["Sekai0NI0itamio"],
+    "credits": "Mojang for the original designs; all textures in this mod are original creations, not Mojang assets.",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
