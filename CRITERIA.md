@@ -27,9 +27,9 @@
 - [x] Wind charge burst: knockback-resistance (not blast protection), no trail particles, +0.25 face-normal block offset, 1.2 radius constant — evidence: green build 41203505384
 - [ ] User retests in game (questions asked 2026-10-31; awaiting observations)
 
-## v1.1.2 change set (2026-10-31) — status: in progress
+## v1.1.2 change set (2026-10-31) — status: done, green build 41205677387
 
-- [ ] Wind burst particles: two-ring gust snapshot (inner CLOUD ring + outer SMOKE_LARGE ring, center puff + sparks) instead of box-spread cloud
-- [ ] Spear jab feedback: sweep sound + sweep particles on hit so the jab reads in game
-- [ ] Spear/lunge/easy-swap audit: all assets present in jar, all code paths intact
-- [ ] Green cloud build publishes non-empty jar; user retests spear + wind charge
+- [x] Wind burst particles: two-ring gust snapshot (inner CLOUD ring + outer SMOKE_LARGE ring, center puff + sparks) instead of box-spread cloud — evidence: green build 41205677387
+- [x] Spear jab feedback: sweep sound + sweep particles on hit so the jab reads in game — evidence: green build 41205677387
+- [x] Spear/lunge/easy-swap audit: all assets present in jar (class, Lunge class, model, both recipes, texture, lang), all code paths intact — evidence: jar listing + JSON validation
+- [ ] Green cloud build publishes non-empty jar (run 41205677387 `success`, artifact 59412 bytes, local jar 44523 bytes); user retests spear + wind charge
