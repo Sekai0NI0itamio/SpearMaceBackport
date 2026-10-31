@@ -26,7 +26,7 @@ public class ModItems {
 
     public static final ItemMace MACE = new ItemMace();
     public static final ItemDiamondSpear DIAMOND_SPEAR = new ItemDiamondSpear();
-    public static final Item HEAVY_CORE = single("heavy_core", 64);
+    public static final ItemWindCharge WIND_CHARGE = new ItemWindCharge();
     public static final Item BREEZE_ROD = single("breeze_rod", 64);
 
     private static Item single(String name, int stack) {

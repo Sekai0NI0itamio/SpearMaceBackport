@@ -8,3 +8,12 @@
 - [x] No Mojang bytes in repo: original art only; official textures via local `tools/apply_official_textures.sh` -> gitignored `OfficialArt/` resource pack (user's own client jar, local use)
 - [x] Cloud-only: gh used for all runs; no local compile — evidence: Actions history
 - [ ] In-game playtest on 1.12.2 (damage vs armor, fall timing, anvil outputs) — needs a 1.12.2 instance. Open.
+
+## v1.1.0 change set (2026-10-31) — status: in progress
+
+- [ ] Official Mojang textures committed for mace, wind_charge, breeze_rod (user override of no-bytes rule), extracted from Mojang CDN 1.21 client jar
+- [ ] Wind charge item: 64-stack, right-click throw, 10-tick cooldown, direct-hit 1 damage, 2.4-block burst (+22% knockback feel, ~6-block self-launch aiming down), fall-damage negation below burst Y, toggles doors/buttons/levers, dispenser-fireable
+- [ ] Mace smash spawns modern-style particles: explosion burst + block-crack dust of the block under a grounded victim (skipped when victim center is in air)
+- [ ] Recipes: spear (both mirror files) stays craftable; mace/breeze_rod/heavy_core recipes deleted; NO wind_charge recipe; heavy_core item/model/lang fully removed
+- [ ] Mace anvil allowlist = everything modern (Density, Breach, Wind Burst, Smite, Bane, Fire Aspect, Unbreaking, Mending, Curse of Vanishing); exclusivity unchanged
+- [ ] Green cloud build publishes non-empty jar; README/CRITERIA/memory updated

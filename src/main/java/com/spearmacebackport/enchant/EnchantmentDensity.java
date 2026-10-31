@@ -6,7 +6,7 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnumEnchantmentType;
 import net.minecraft.item.ItemStack;
 
-/** Modern Density: +1 smash damage per fallen block per level. Max 5, table-available. */
+/** Modern Density: +0.5 smash damage per fallen block per level. Max 5, table-available. */
 public class EnchantmentDensity extends Enchantment {
     public EnchantmentDensity() {
         super(Rarity.COMMON, EnumEnchantmentType.WEAPON, ModEnchants.hand());

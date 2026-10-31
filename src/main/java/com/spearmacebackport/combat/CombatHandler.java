@@ -5,20 +5,26 @@ import com.spearmacebackport.enchant.ModEnchants;
 import com.spearmacebackport.item.ItemDiamondSpear;
 import com.spearmacebackport.item.ItemMace;
 import com.spearmacebackport.item.ModItems;
+import net.minecraft.block.Block;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.init.MobEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.CombatRules;
+import net.minecraft.util.EnumParticleTypes;
 import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.WorldServer;
 import net.minecraft.world.storage.loot.LootEntryItem;
 import net.minecraft.world.storage.loot.LootPool;
 import net.minecraft.world.storage.loot.RandomValueRange;
@@ -34,6 +40,7 @@ import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 
 import java.util.HashMap;
 import java.util.List;
@@ -67,6 +74,7 @@ public class CombatHandler {
 
     private static final Map<UUID, SwapMemory> LAST_SWORD_HIT = new HashMap<>();
     private static final Map<UUID, Long> LAST_SMASH_MS = new HashMap<>();
+    private static final Map<UUID, BurstRecord> WIND_BURSTS = new HashMap<>();
 
     private static final class SwapMemory {
         final long timeMs;
@@ -78,6 +86,27 @@ public class CombatHandler {
             this.damage = damage;
             this.victimId = victimId;
         }
+    }
+
+    private static final class BurstRecord {
+        final double y;
+        final long time;
+
+        BurstRecord(double y, long time) {
+            this.y = y;
+            this.time = time;
+        }
+    }
+
+    /**
+     * Records a wind-burst launch so the next landing only accumulates fall
+     * damage below the burst height, exactly like modern: the burst also
+     * zeroes whatever fall distance the player had going in.
+     */
+    public static void recordWindBurst(EntityPlayer player, double burstY) {
+        player.fallDistance = 0.0F;
+        WIND_BURSTS.put(player.getUniqueID(),
+                new BurstRecord(burstY, player.world.getTotalWorldTime()));
     }
 
     @SubscribeEvent
@@ -122,6 +151,8 @@ public class CombatHandler {
             double bonus = first * 4.0D + second * 2.0D + rest
                     + fallen * DENSITY_PER_BLOCK_PER_LEVEL * density;
             event.setAmount(event.getAmount() + (float) bonus);
+            attacker.motionY = 0.0D;
+            attacker.velocityChanged = true;
             if (breach > 0) {
                 applyBreach(event, breach);
             }
@@ -131,6 +162,7 @@ public class CombatHandler {
                 attacker.velocityChanged = true;
             }
             smashKnockback(attacker, event.getEntityLiving(), fallen);
+            spawnSmashParticles(attacker, event.getEntityLiving());
             attacker.fallDistance = 0.0F;
             LAST_SMASH_MS.put(attacker.getUniqueID(), System.currentTimeMillis());
 
@@ -155,6 +187,32 @@ public class CombatHandler {
             }
             nearby.knockBack(attacker, (float) strength,
                     attacker.posX - nearby.posX, attacker.posZ - nearby.posZ);
+        }
+    }
+
+    /**
+     * Modern smash visuals: an explosive burst at the victim plus block-dust
+     * of the block the victim stands on — skipped when the victim's center is
+     * in the air, exactly like the modern dust_pillar behavior.
+     */
+    private static void spawnSmashParticles(EntityPlayer attacker, EntityLivingBase victim) {
+        if (!(attacker.world instanceof WorldServer)) {
+            return;
+        }
+        WorldServer ws = (WorldServer) attacker.world;
+        double x = victim.posX;
+        double y = victim.posY + victim.height * 0.5D;
+        double z = victim.posZ;
+        ws.spawnParticle(EnumParticleTypes.EXPLOSION_LARGE, x, y, z,
+                2, 0.3D, 0.3D, 0.3D, 0.0D);
+        ws.spawnParticle(EnumParticleTypes.CLOUD, x, y, z,
+                12, 0.6D, 0.6D, 0.6D, 0.05D);
+        BlockPos below = new BlockPos(x, victim.getEntityBoundingBox().minY - 0.2D, z);
+        IBlockState ground = attacker.world.getBlockState(below);
+        if (ground.getBlock() != Blocks.AIR) {
+            ws.spawnParticle(EnumParticleTypes.BLOCK_CRACK, x,
+                    victim.getEntityBoundingBox().minY + 0.1D, z,
+                    24, 0.5D, 0.1D, 0.5D, 0.0D, Block.getStateId(ground));
         }
     }
 
@@ -211,11 +269,23 @@ public class CombatHandler {
             return;
         }
         EntityPlayer player = (EntityPlayer) event.getEntityLiving();
+        BurstRecord burst = WIND_BURSTS.remove(player.getUniqueID());
+        if (burst != null && player.world.getTotalWorldTime() - burst.time < 200L) {
+            float adjusted = (float) Math.max(0.0D, burst.y - player.posY);
+            event.setDistance(Math.min(event.getDistance(), adjusted));
+        }
         Long smashMs = LAST_SMASH_MS.get(player.getUniqueID());
         if (smashMs != null && System.currentTimeMillis() - smashMs < 1000L
                 && event.getDistance() < 6.0F) {
             event.setCanceled(true);
             LAST_SMASH_MS.remove(player.getUniqueID());
+        }
+    }
+
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        if (event.player != null) {
+            WIND_BURSTS.remove(event.player.getUniqueID());
         }
     }
 
@@ -432,6 +502,7 @@ public class CombatHandler {
                 && (ench.getRegistryName().toString().startsWith("minecraft:smite")
                 || ench.getRegistryName().toString().startsWith("minecraft:bane_of_arthropods")
                 || ench.getRegistryName().toString().startsWith("minecraft:fire_aspect")
+                || ench.getRegistryName().toString().startsWith("minecraft:vanishing")
                 || ench.getRegistryName().toString().startsWith("minecraft:unbreaking")
                 || ench.getRegistryName().toString().startsWith("minecraft:mending")));
     }

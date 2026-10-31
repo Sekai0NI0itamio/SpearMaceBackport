@@ -1,7 +1,9 @@
 #!/usr/bin/env sh
-# Builds a 1.12.2 resource pack with the OFFICIAL Mojang textures for this
-# mod's items, extracted from YOUR OWN legally owned Minecraft client jar.
-# Nothing Mojang-made is committed to the repo; run this locally only.
+# RETIRED in v1.1.0: official Mojang textures are now committed directly in
+# src/main/resources by owner decision. This script is kept for reference only.
+# (Original purpose: builds a 1.12.2 resource pack with the OFFICIAL Mojang
+# textures for this mod's items, extracted from YOUR OWN legally owned client
+# jar; nothing Mojang-made was committed to the repo; run locally only.)
 #
 # Usage: ./tools/apply_official_textures.sh /path/to/1.21.x.jar
 # The pack appears at OfficialArt/ -> copy it into your resourcepacks folder.

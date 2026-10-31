@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "spearmacebackport:items/heavy_core"
+    "layer0": "spearmacebackport:items/wind_charge"
   }
 }
