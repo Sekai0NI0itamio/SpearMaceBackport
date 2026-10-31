@@ -23,7 +23,7 @@ mace smash with no vanilla attribute-swapping.
 - Crafting (all 1.12.2-obtainable): Heavy Core (obsidian ring + diamond),
   Breeze Rod (feather + blaze rod + stick), Mace (core + rod + stick),
   Diamond Spear (diagonal diamond + 2 sticks). Diamond Spear + Wind Burst book
-  also appear in dungeon / End City chests.
+  also appear in dungeon / End City chests (~50% per chest).
 
 All textures are original creations for this mod, not Mojang assets.
 
