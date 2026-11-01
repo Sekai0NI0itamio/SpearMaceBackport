@@ -38,6 +38,11 @@ public class ItemMace extends Item {
     }
 
     @Override
+    public int getItemEnchantability() {
+        return 15;
+    }
+
+    @Override
     public boolean hitEntity(ItemStack stack, net.minecraft.entity.EntityLivingBase target,
                             net.minecraft.entity.EntityLivingBase attacker) {
         stack.damageItem(1, attacker);

@@ -42,6 +42,11 @@ public class ItemDiamondSpear extends Item {
     }
 
     @Override
+    public int getItemEnchantability() {
+        return 10;
+    }
+
+    @Override
     public boolean hitEntity(ItemStack stack, net.minecraft.entity.EntityLivingBase target,
                             net.minecraft.entity.EntityLivingBase attacker) {
         stack.damageItem(1, attacker);

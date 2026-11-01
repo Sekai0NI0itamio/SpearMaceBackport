@@ -41,3 +41,9 @@
 - [x] Lunge verified byte-exact vs official lunge.json (0.458/level horizontal impulse, +1 damage, 4/level exhaustion, no ride/glide/water, food >= 7) — evidence: side-by-side with 26.3 sources
 - [x] Jab verified vs official PiercingWeapon.attack (full attribute damage, multi-target wall-checked line, stab scaling, lunge post-effect) — evidence: side-by-side with 26.3 sources
 - [x] Green cloud build publishes non-empty jar (run 41206784849 `success`); local jar downloaded (1.1.3); user retests spear
+
+## v1.1.4 change set (2026-11-01) — status: in progress
+
+- [ ] Enchanting-table access fixed: explicit canApplyAtEnchantingTable on Lunge/Density/Breach/WindBurst + item enchantability (mace 15, spear 10)
+- [ ] Auto-swap: falling smash with non-mace/non-spear held fires first inventory mace's smash package (bonus, Breach, Wind Burst, knockback, particles, fall protection) for 1 mace durability
+- [ ] Green cloud build publishes non-empty jar; user retests lunge + auto-swap

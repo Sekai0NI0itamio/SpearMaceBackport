@@ -69,6 +69,9 @@ import java.util.UUID;
  * 4.6/5.1 block/s gates; Lunge propels 0.458 blocks/tick/level on jab for
  * 1 durability + hunger. Easy-swap: a sword hit followed by a mace smash
  * within 1.0s applies BOTH hits without vanilla attribute swapping.
+ * Auto-swap: falling past the smash threshold with any non-mace, non-spear
+ * weapon fires the smash package of the first inventory mace (hotbar first)
+ * on top of the held weapon's own hit, costing the mace 1 durability.
  * Backport limits (documented in README): no hold-to-charge
  * stages/dismount, single charge damage roll.
  */
@@ -151,6 +154,23 @@ public class CombatHandler {
             handleMaceHit(event, attacker, held);
         } else if (held.getItem() instanceof ItemDiamondSpear) {
             handleSpearMelee(event, attacker);
+        } else if (isSmash(attacker)) {
+            // Auto-swap: falling past the smash threshold with any non-mace,
+            // non-spear weapon in hand fires the smash package of the first
+            // mace found in the inventory (hotbar first). The held weapon
+            // keeps its own hit; the mace contributes its smash bonus,
+            // Breach shred, Wind Burst, knockback, particles and fall
+            // protection, and takes 1 durability.
+            ItemStack mace = findMace(attacker);
+            if (!mace.isEmpty()) {
+                applyMaceSmash(event, attacker, mace, true);
+                return;
+            }
+            if (held.getItem() instanceof ItemSword) {
+                LAST_SWORD_HIT.put(attacker.getUniqueID(),
+                        new SwapMemory(System.currentTimeMillis(), event.getAmount(),
+                                event.getEntityLiving().getEntityId()));
+            }
         } else if (held.getItem() instanceof ItemSword) {
             LAST_SWORD_HIT.put(attacker.getUniqueID(),
                     new SwapMemory(System.currentTimeMillis(), event.getAmount(),
@@ -158,39 +178,23 @@ public class CombatHandler {
         }
     }
 
+    private static ItemStack findMace(EntityPlayer player) {
+        for (ItemStack stack : player.inventory.mainInventory) {
+            if (!stack.isEmpty() && stack.getItem() instanceof ItemMace) {
+                return stack;
+            }
+        }
+        ItemStack offhand = player.getHeldItemOffhand();
+        if (!offhand.isEmpty() && offhand.getItem() instanceof ItemMace) {
+            return offhand;
+        }
+        return ItemStack.EMPTY;
+    }
+
     private static void handleMaceHit(LivingHurtEvent event, EntityPlayer attacker, ItemStack held) {
         int breach = EnchantmentHelper.getEnchantmentLevel(ModEnchants.BREACH, held);
         if (isSmash(attacker)) {
-            float fallen = attacker.fallDistance;
-            int density = EnchantmentHelper.getEnchantmentLevel(ModEnchants.DENSITY, held);
-            int windBurst = EnchantmentHelper.getEnchantmentLevel(ModEnchants.WIND_BURST, held);
-
-            // Engine tiers: +4 for each of the first 3 blocks, +2 for the next
-            // 5, +1 beyond; Density adds +0.5 per block per level. Smash
-            // ignores attack cooldown (MC-270160, Works As Intended); the usual
-            // falling crit is applied by vanilla itself (x1.5).
-            double first = Math.min(fallen, 3.0D);
-            double second = Math.min(Math.max(fallen - 3.0D, 0.0D), 5.0D);
-            double rest = Math.max(fallen - 8.0D, 0.0D);
-            double bonus = first * 4.0D + second * 2.0D + rest
-                    + fallen * DENSITY_PER_BLOCK_PER_LEVEL * density;
-            event.setAmount(event.getAmount() + (float) bonus);
-            attacker.motionY = 0.01D;
-            attacker.velocityChanged = true;
-            if (breach > 0) {
-                applyBreach(event, breach);
-            }
-
-            if (windBurst > 0) {
-                EntityWindCharge.burst(attacker.world, attacker.posX, attacker.posY, attacker.posZ,
-                        WIND_BURST_RADIUS, WIND_BURST_MULTIPLIER[Math.min(windBurst, 3)], false, null);
-            } else {
-                SMASH_IMPACTS.put(attacker.getUniqueID(), new SmashRecord(attacker.posY,
-                        event.getEntityLiving().onGround, attacker.world.getTotalWorldTime()));
-            }
-            smashKnockback(attacker, event.getEntityLiving(), fallen);
-            spawnSmashParticles(attacker, event.getEntityLiving());
-            attacker.fallDistance = 0.0F;
+            applyMaceSmash(event, attacker, held, false);
 
             SwapMemory memory = LAST_SWORD_HIT.remove(attacker.getUniqueID());
             if (memory != null
@@ -200,6 +204,44 @@ public class CombatHandler {
             }
         } else if (breach > 0) {
             applyBreach(event, breach);
+        }
+    }
+
+    private static void applyMaceSmash(LivingHurtEvent event, EntityPlayer attacker,
+            ItemStack maceStack, boolean damageMace) {
+        float fallen = attacker.fallDistance;
+        int density = EnchantmentHelper.getEnchantmentLevel(ModEnchants.DENSITY, maceStack);
+        int windBurst = EnchantmentHelper.getEnchantmentLevel(ModEnchants.WIND_BURST, maceStack);
+        int breach = EnchantmentHelper.getEnchantmentLevel(ModEnchants.BREACH, maceStack);
+
+        // Engine tiers: +4 for each of the first 3 blocks, +2 for the next
+        // 5, +1 beyond; Density adds +0.5 per block per level. Smash
+        // ignores attack cooldown (MC-270160, Works As Intended); the usual
+        // falling crit is applied by vanilla itself (x1.5).
+        double first = Math.min(fallen, 3.0D);
+        double second = Math.min(Math.max(fallen - 3.0D, 0.0D), 5.0D);
+        double rest = Math.max(fallen - 8.0D, 0.0D);
+        double bonus = first * 4.0D + second * 2.0D + rest
+                + fallen * DENSITY_PER_BLOCK_PER_LEVEL * density;
+        event.setAmount(event.getAmount() + (float) bonus);
+        attacker.motionY = 0.01D;
+        attacker.velocityChanged = true;
+        if (breach > 0) {
+            applyBreach(event, breach);
+        }
+
+        if (windBurst > 0) {
+            EntityWindCharge.burst(attacker.world, attacker.posX, attacker.posY, attacker.posZ,
+                    WIND_BURST_RADIUS, WIND_BURST_MULTIPLIER[Math.min(windBurst, 3)], false, null);
+        } else {
+            SMASH_IMPACTS.put(attacker.getUniqueID(), new SmashRecord(attacker.posY,
+                    event.getEntityLiving().onGround, attacker.world.getTotalWorldTime()));
+        }
+        smashKnockback(attacker, event.getEntityLiving(), fallen);
+        spawnSmashParticles(attacker, event.getEntityLiving());
+        attacker.fallDistance = 0.0F;
+        if (damageMace) {
+            maceStack.damageItem(1, attacker);
         }
     }
 

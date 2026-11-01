@@ -47,6 +47,12 @@ sword hit and the mace smash with no vanilla attribute-swapping.
 - **Easy-swap** — land a sword hit, then a mace smash on the same target
   within 1.0s, and the stored sword damage is added to the smash. Included in
   this mod (no separate mod needed).
+- **Auto-swap** — falling past the 1.5-block smash threshold while holding
+  any non-mace, non-spear weapon automatically fires the smash package of
+  the first mace in your inventory (hotbar first) on top of your weapon's
+  own hit: smash damage bonus, Breach shred, Wind Burst launch, knockback,
+  particles and fall protection, costing the mace 1 durability. No manual
+  swapping needed.
 - Crafting: only the Diamond Spear (diagonal diamond + 2 sticks, plus a
   mirror recipe). Diamond Spear + Wind Burst book also appear in dungeon /
   End City chests (~50% per chest).

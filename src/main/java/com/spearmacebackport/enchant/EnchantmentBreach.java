@@ -33,4 +33,9 @@ public class EnchantmentBreach extends Enchantment {
     public boolean canApply(ItemStack stack) {
         return stack.getItem() instanceof ItemMace;
     }
+
+    @Override
+    public boolean canApplyAtEnchantingTable(ItemStack stack) {
+        return stack.getItem() instanceof ItemMace;
+    }
 }
