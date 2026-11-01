@@ -69,7 +69,7 @@
 - [x] Dual-art via render-context switch (world null = short icon, world live = long held art); dead perspective code removed — evidence: green build 41266294075, both models + PNGs in jar
 - [x] Green cloud build publishes non-empty jar (run 41266294075 `success`); local 1.1.8 jar downloaded; held render still short -> root cause: override model never registered as item variant
 
-## v1.1.9 change set (2026-11-01) — status: in progress
+## v1.1.9 change set (2026-11-01) — status: done, green build 41268540779
 
-- [ ] Register diamond_spear_in_hand via registerItemVariants (the vanilla bow_pulling requirement); override can now actually load
-- [ ] Green cloud build publishes non-empty jar; user confirms held render = long art
+- [x] Register diamond_spear_in_hand via registerItemVariants (the vanilla bow_pulling requirement); override can now actually load — evidence: green build 41268540779
+- [x] Green cloud build publishes non-empty jar (run 41268540779 `success`); local 1.1.9 jar downloaded; user confirms held render = long art
