@@ -81,8 +81,8 @@
 
 ## v1.1.11 change set (2026-11-01) — status: superseded by 1.1.12 (green build 41270223146; sweep rejected by user, grace kept)
 
-## v1.1.12 change set (2026-11-01) — status: in progress
+## v1.1.12 change set (2026-11-01) — status: done, green build 41271182064
 
-- [ ] Landing grace 1.0s for smash trigger (kept from 1.1.11)
-- [ ] Mace hit-assist replaces the rejected sweep: whiffed mace swings re-check with doubled mob boxes (wall-checked, meter-scaled, crit-aware)
-- [ ] Green cloud build publishes non-empty jar; user confirms easier mace hits
+- [x] Landing grace 1.0s for smash trigger (kept from 1.1.11) — evidence: green build 41271182064
+- [x] Mace hit-assist replaces the rejected sweep: whiffed mace swings re-check with doubled mob boxes (wall-checked, meter-scaled, crit-aware) — evidence: green build 41271182064
+- [x] Green cloud build publishes non-empty jar (run 41271182064 `success`); local 1.1.12 jar downloaded; user confirms easier mace hits
