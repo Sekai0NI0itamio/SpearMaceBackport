@@ -63,3 +63,8 @@
 
 - [x] Held-spear render fixed by removing the backwards override: single long-art model, vanilla sword grip everywhere — evidence: green build 41264713721, jar model 1096 bytes, no in_hand files
 - [x] Green cloud build publishes non-empty jar (run 41264713721 `success`); local 1.1.7 jar downloaded (47045 bytes)
+
+## v1.1.8 change set (2026-11-01) — status: in progress
+
+- [ ] Perspective wrapper: short icon for GUI/GROUND/FIXED, long art for first/third person (no held-detection predicates)
+- [ ] Green cloud build publishes non-empty jar; user confirms inventory icon + held render

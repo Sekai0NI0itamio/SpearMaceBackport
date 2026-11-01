@@ -31,9 +31,10 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   dispensers can fire it too.
 - **Breeze Rod** (creative-only) — repair material for the mace.
 - **Diamond Spear** (craftable — the only survival recipe, official Mojang
-  recipe) — official Mojang long-spear art in a single model with a vanilla
-  sword-style grip (the dual-model held override rendered backwards in
-  1.12.2, so it was removed). Melee swings work like a sword at 4 damage
+  recipe) — official Mojang long-spear art in hand, short icon in
+  inventory: a perspective wrapper shows the 16×16 art for GUI/ground/frames
+  and the 32×32 held art (vanilla sword-style grip) for first/third person.
+  Melee swings work like a sword at 4 damage
   with a hard 2-block dead zone and never crit. Right-click jab hits everything in a 2–4.5
   block wall-checked line, scaling with the attack meter exactly like a
   vanilla swing (weak spam-clicks land, full meter lands the full 4 +
