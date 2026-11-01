@@ -11,8 +11,9 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   fallen, cooldown ignored): +4 damage per block for the first 3 blocks, +2
   for the next 5, +1 beyond, vertical momentum reset, landing only counts
   fall damage below the smash height, and the official knockback formula
-  within 3.5 blocks (fixed +0.7 lift, doubled past 5 fallen blocks).
-  Successful smashes burst modern-style particles: an explosion flash plus
+  within 3.5 blocks (fixed +0.7 lift, doubled past 5 fallen blocks). Forgiveness
+  rule (deliberate deviation from vanilla): landing within 0.5s of a 1.5+
+  fall still smashes, so late clicks are not lost. Successful smashes burst modern-style particles: an explosion flash plus
   block-dust of the block under a grounded victim, and landing dust when
   you touch down. Enchants via anvil: **Density** (+0.5/block/level,
   max 5), **Breach** (−15% armor effectiveness/level, max 4),

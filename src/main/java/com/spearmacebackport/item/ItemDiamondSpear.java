@@ -2,12 +2,18 @@ package com.spearmacebackport.item;
 
 import com.google.common.collect.Multimap;
 import com.spearmacebackport.SpearMaceBackportMod;
+import com.spearmacebackport.combat.CombatHandler;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.item.EnumActionResult;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.ActionResult;
+import net.minecraft.util.EnumHand;
+import net.minecraft.world.World;
 
 /**
  * Diamond Spear backport (diamond tier only, per request).
@@ -44,6 +50,17 @@ public class ItemDiamondSpear extends Item {
     @Override
     public int getItemEnchantability() {
         return 10;
+    }
+
+    @Override
+    public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
+        ItemStack stack = player.getHeldItem(hand);
+        if (world.isRemote) {
+            player.swingArm(hand);
+        } else {
+            CombatHandler.performSpearJab(player, stack, hand);
+        }
+        return new ActionResult<>(EnumActionResult.SUCCESS, stack);
     }
 
     @Override

@@ -23,6 +23,7 @@ import net.minecraft.init.MobEffects;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.EnumHand;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.CombatRules;
 import net.minecraft.util.EnumParticleTypes;
@@ -42,7 +43,6 @@ import net.minecraftforge.event.AnvilUpdateEvent;
 import net.minecraftforge.event.LootTableLoadEvent;
 import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
@@ -58,7 +58,10 @@ import java.util.UUID;
  * read from the official unobfuscated 26.3 sources: mace base 6, speed 0.6,
  * smash tiers +4/+2/+1 per fallen block (full fall distance, triggers at
  * >1.5, cooldown ignored per MC-270160), Density +0.5/block/level, Breach -15%
- * armor effectiveness/level, smash knocks back within 3.5 blocks with the
+ * armor effectiveness/level, Wind Burst is a 3.5-radius explosion at the
+ * attacker (multipliers 1.2/1.75/2.2, no fall protection); intentional
+ * forgiveness deviation: landing within 0.5s of a 1.5+ fall still smashes.
+ * Smash knocks back within 3.5 blocks with the
  * official (3.5-dist) x 0.7 x high-fall-double formula and a fixed +0.7 lift,
  * smash resets vertical momentum to 0.01 and records the impact height so
  * landing only counts fall damage below it. Wind Burst is a 3.5-radius
@@ -90,6 +93,7 @@ public class CombatHandler {
     private static final Map<UUID, SwapMemory> LAST_SWORD_HIT = new HashMap<>();
     private static final Map<UUID, BurstRecord> WIND_BURSTS = new HashMap<>();
     private static final Map<UUID, SmashRecord> SMASH_IMPACTS = new HashMap<>();
+    private static final Map<UUID, LandRecord> LAST_LAND = new HashMap<>();
 
     private static final class SwapMemory {
         final long timeMs;
@@ -121,6 +125,16 @@ public class CombatHandler {
         SmashRecord(double y, boolean groundedVictim, long time) {
             this.y = y;
             this.groundedVictim = groundedVictim;
+            this.time = time;
+        }
+    }
+
+    private static final class LandRecord {
+        final float distance;
+        final long time;
+
+        LandRecord(float distance, long time) {
+            this.distance = distance;
             this.time = time;
         }
     }
@@ -163,7 +177,7 @@ public class CombatHandler {
             // protection, and takes 1 durability.
             ItemStack mace = findMace(attacker);
             if (!mace.isEmpty()) {
-                applyMaceSmash(event, attacker, mace, true);
+                applyMaceSmash(event, attacker, mace, smashFallen(attacker), true);
                 return;
             }
             if (held.getItem() instanceof ItemSword) {
@@ -194,7 +208,7 @@ public class CombatHandler {
     private static void handleMaceHit(LivingHurtEvent event, EntityPlayer attacker, ItemStack held) {
         int breach = EnchantmentHelper.getEnchantmentLevel(ModEnchants.BREACH, held);
         if (isSmash(attacker)) {
-            applyMaceSmash(event, attacker, held, false);
+            applyMaceSmash(event, attacker, held, smashFallen(attacker), false);
 
             SwapMemory memory = LAST_SWORD_HIT.remove(attacker.getUniqueID());
             if (memory != null
@@ -208,8 +222,7 @@ public class CombatHandler {
     }
 
     private static void applyMaceSmash(LivingHurtEvent event, EntityPlayer attacker,
-            ItemStack maceStack, boolean damageMace) {
-        float fallen = attacker.fallDistance;
+            ItemStack maceStack, float fallen, boolean damageMace) {
         int density = EnchantmentHelper.getEnchantmentLevel(ModEnchants.DENSITY, maceStack);
         int windBurst = EnchantmentHelper.getEnchantmentLevel(ModEnchants.WIND_BURST, maceStack);
         int breach = EnchantmentHelper.getEnchantmentLevel(ModEnchants.BREACH, maceStack);
@@ -238,7 +251,7 @@ public class CombatHandler {
                     event.getEntityLiving().onGround, attacker.world.getTotalWorldTime()));
         }
         smashKnockback(attacker, event.getEntityLiving(), fallen);
-        spawnSmashParticles(attacker, event.getEntityLiving());
+        spawnSmashParticles(attacker, event.getEntityLiving(), fallen);
         attacker.fallDistance = 0.0F;
         if (damageMace) {
             maceStack.damageItem(1, attacker);
@@ -303,7 +316,8 @@ public class CombatHandler {
      * of the block the victim stands on — skipped when the victim's center is
      * in the air, exactly like the modern dust_pillar behavior.
      */
-    private static void spawnSmashParticles(EntityPlayer attacker, EntityLivingBase victim) {
+    private static void spawnSmashParticles(EntityPlayer attacker, EntityLivingBase victim,
+            float fallen) {
         if (!(attacker.world instanceof WorldServer)) {
             return;
         }
@@ -311,7 +325,7 @@ public class CombatHandler {
         double x = victim.posX;
         double y = victim.posY + victim.height * 0.5D;
         double z = victim.posZ;
-        boolean heavy = attacker.fallDistance > 5.0F;
+        boolean heavy = fallen > 5.0F;
         boolean grounded = victim.onGround;
         ws.playSound(null, x, y, z, SoundEvents.ENTITY_GENERIC_EXPLODE,
                 SoundCategory.BLOCKS, grounded ? (heavy ? 1.0F : 0.7F) : 0.5F,
@@ -352,7 +366,24 @@ public class CombatHandler {
     }
 
     private static boolean isSmash(EntityPlayer attacker) {
-        return !attacker.onGround && attacker.fallDistance > 1.5F;
+        if (!attacker.onGround && attacker.fallDistance > 1.5F) {
+            return true;
+        }
+        // Intentional forgiveness deviation from vanilla: landing within the
+        // last 0.5s after a 1.5+ block fall still smashes, so clicks that
+        // land a tick late are not lost.
+        LandRecord land = LAST_LAND.get(attacker.getUniqueID());
+        return attacker.onGround && land != null
+                && attacker.world.getTotalWorldTime() - land.time < 10L
+                && land.distance > 1.5F;
+    }
+
+    private static float smashFallen(EntityPlayer attacker) {
+        if (!attacker.onGround) {
+            return attacker.fallDistance;
+        }
+        LandRecord land = LAST_LAND.get(attacker.getUniqueID());
+        return land != null ? land.distance : 0.0F;
     }
 
     private static void handleSpearMelee(LivingHurtEvent event, EntityPlayer attacker) {
@@ -382,6 +413,10 @@ public class CombatHandler {
             return;
         }
         EntityPlayer player = (EntityPlayer) event.getEntityLiving();
+        if (event.getDistance() > 0.0F) {
+            LAST_LAND.put(player.getUniqueID(),
+                    new LandRecord(event.getDistance(), player.world.getTotalWorldTime()));
+        }
         BurstRecord burst = WIND_BURSTS.remove(player.getUniqueID());
         if (burst != null && player.world.getTotalWorldTime() - burst.time < 40L) {
             float adjusted = (float) Math.max(0.0D, burst.y - player.posY);
@@ -420,16 +455,15 @@ public class CombatHandler {
         if (event.player != null) {
             WIND_BURSTS.remove(event.player.getUniqueID());
             SMASH_IMPACTS.remove(event.player.getUniqueID());
+            LAST_LAND.remove(event.player.getUniqueID());
         }
     }
 
-    @SubscribeEvent
-    public static void onSpearJab(PlayerInteractEvent.RightClickItem event) {
-        if (event.getWorld().isRemote || !(event.getEntityPlayer() instanceof EntityPlayer)) {
-            return;
-        }
-        EntityPlayer player = event.getEntityPlayer();
-        ItemStack held = event.getItemStack();
+    /**
+     * Spear jab, invoked from the item's own right-click dispatch (which is
+     * proven to reach the server) rather than the interact event.
+     */
+    public static void performSpearJab(EntityPlayer player, ItemStack held, EnumHand hand) {
         if (held.isEmpty() || !(held.getItem() instanceof ItemDiamondSpear)) {
             return;
         }
@@ -475,7 +509,7 @@ public class CombatHandler {
             }
             // Spend the attack meter, mirroring a fully charged swing.
             player.resetCooldown();
-            player.swingArm(event.getHand());
+            player.swingArm(hand);
             EntityLivingBase first = targets.get(0);
             player.world.playSound(null, first.posX, first.posY, first.posZ,
                     SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 1.0F);
@@ -487,11 +521,10 @@ public class CombatHandler {
         } else {
             // Whiffed (dead zone, wall, or out of reach): swing + soft whoosh
             // so the jab always reads, exactly like the modern swing.
-            player.swingArm(event.getHand());
+            player.swingArm(hand);
             player.world.playSound(null, player.posX, player.posY, player.posZ,
                     SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.4F, 1.2F);
         }
-        event.setCanceled(true);
     }
 
     private static double closingSpeed(EntityPlayer player, EntityLivingBase target) {
