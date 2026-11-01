@@ -40,5 +40,11 @@ public class ClientProxy extends CommonProxy {
             ModelLoader.setCustomModelResourceLocation(item, 0,
                     new ModelResourceLocation(item.getRegistryName(), "inventory"));
         }
+        // REQUIRED in 1.12.2: models referenced only from an override block
+        // are never loaded unless registered as item variants (this is how
+        // vanilla loads bow_pulling_0/1/2). Without this line the override
+        // is silently dead and the base model shows everywhere.
+        ModelLoader.registerItemVariants(ModItems.DIAMOND_SPEAR,
+                new ResourceLocation(SpearMaceBackportMod.MOD_ID, "item/diamond_spear_in_hand"));
     }
 }
