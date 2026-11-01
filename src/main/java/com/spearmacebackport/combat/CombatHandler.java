@@ -45,6 +45,7 @@ import net.minecraftforge.event.entity.living.LivingFallEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 
 import java.util.HashMap;
@@ -61,7 +62,7 @@ import java.util.UUID;
  * armor effectiveness/level, Wind Burst is a 3.5-radius explosion at the
  * attacker (multipliers 1.2/1.75/2.2, no fall protection); intentional
  * forgiveness deviations: landing within 1.0s of a 1.5+ fall still
- * smashes, and every mace hit sweeps full damage to nearby mobs.
+ * smashes, and mob hitboxes count double while you hold a mace.
  * Smash knocks back within 3.5 blocks with the
  * official (3.5-dist) x 0.7 x high-fall-double formula and a fixed +0.7 lift,
  * smash resets vertical momentum to 0.01 and records the impact height so
@@ -165,6 +166,9 @@ public class CombatHandler {
             return;
         }
 
+        SwingWatch watch = SWINGS.computeIfAbsent(attacker.getUniqueID(), k -> new SwingWatch());
+        watch.lastHitTick = attacker.world.getTotalWorldTime();
+
         if (held.getItem() instanceof ItemMace) {
             handleMaceHit(event, attacker, held);
         } else if (held.getItem() instanceof ItemDiamondSpear) {
@@ -221,7 +225,6 @@ public class CombatHandler {
             if (breach > 0) {
                 applyBreach(event, breach);
             }
-            sweepMace(attacker, event.getEntityLiving(), event.getAmount());
         }
     }
 
@@ -256,7 +259,6 @@ public class CombatHandler {
         }
         smashKnockback(attacker, event.getEntityLiving(), fallen);
         spawnSmashParticles(attacker, event.getEntityLiving(), fallen);
-        sweepMace(attacker, event.getEntityLiving(), event.getAmount());
         attacker.fallDistance = 0.0F;
         if (damageMace) {
             maceStack.damageItem(1, attacker);
@@ -264,23 +266,108 @@ public class CombatHandler {
     }
 
     /**
-     * Forgiveness sweep (deliberate deviation, no vanilla equivalent): a mace
-     * hit also lands its full damage on every other hittable mob within 2
-     * blocks of the victim, so crowds and near-misses stop mattering.
+     * Mace hit-assist (deliberate deviation, no vanilla equivalent): mob
+     * hitboxes are doubled while you hold a mace, so near-miss clicks land.
+     * Missed swings never reach the server, but the swing animation does, so
+     * a fresh swing with no landed hit within 4 ticks runs a generous
+     * raycast (2x boxes, wall-checked) and lands the mace hit directly.
      */
-    private static void sweepMace(EntityPlayer attacker, EntityLivingBase victim, float damage) {
-        if (damage <= 0.0F) {
+    private static final class SwingWatch {
+        boolean wasSwinging;
+        long swingStartTick;
+        long assistTick = -1L;
+        long lastHitTick = -1L;
+    }
+
+    private static final Map<UUID, SwingWatch> SWINGS = new HashMap<>();
+
+    @SubscribeEvent
+    public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.player.world.isRemote
+                || !(event.player instanceof EntityPlayer)) {
             return;
         }
-        for (EntityLivingBase nearby : attacker.world.getEntitiesWithinAABB(EntityLivingBase.class,
-                attacker.getEntityBoundingBox().grow(4.0D))) {
-            if (isSmashImmune(attacker, victim, nearby)) {
+        EntityPlayer player = (EntityPlayer) event.player;
+        SwingWatch watch = SWINGS.computeIfAbsent(player.getUniqueID(), k -> new SwingWatch());
+        boolean swinging = player.isSwingInProgress;
+        if (swinging && !watch.wasSwinging) {
+            watch.swingStartTick = player.world.getTotalWorldTime();
+            watch.assistTick = watch.swingStartTick + 4L;
+        }
+        watch.wasSwinging = swinging;
+        if (watch.assistTick >= 0L
+                && player.world.getTotalWorldTime() >= watch.assistTick) {
+            watch.assistTick = -1L;
+            if (watch.lastHitTick <= watch.swingStartTick) {
+                ItemStack held = player.getHeldItemMainhand();
+                if (held.isEmpty() || !(held.getItem() instanceof ItemMace)) {
+                    held = player.getHeldItemOffhand();
+                }
+                if (!held.isEmpty() && held.getItem() instanceof ItemMace) {
+                    assistMaceHit(player, held);
+                }
+            }
+        }
+    }
+
+    private static void assistMaceHit(EntityPlayer attacker, ItemStack maceStack) {
+        double reach = Math.min(3.5D,
+                blockLimitedReach(attacker, ItemDiamondSpear.MAX_REACH));
+        Vec3d eye = attacker.getPositionEyes(1.0F);
+        Vec3d end = eye.add(attacker.getLook(1.0F).scale(reach));
+        EntityLivingBase best = null;
+        double bestDist = Double.MAX_VALUE;
+        for (EntityLivingBase target : attacker.world.getEntitiesWithinAABB(EntityLivingBase.class,
+                attacker.getEntityBoundingBox().grow(reach + 2.0D))) {
+            if (target == attacker || !target.canBeCollidedWith()
+                    || target instanceof EntityPlayer
+                            && ((EntityPlayer) target).isSpectator()) {
                 continue;
             }
-            if (nearby.getDistance(victim) > 2.0F) {
+            if (target instanceof EntityTameable) {
+                EntityTameable tame = (EntityTameable) target;
+                if (tame.isTamed() && tame.isOwner(attacker)) {
+                    continue;
+                }
+            }
+            AxisAlignedBB box = target.getEntityBoundingBox();
+            double w = Math.max(box.maxX - box.minX, box.maxZ - box.minZ);
+            double h = box.maxY - box.minY;
+            AxisAlignedBB doubled = box.grow(w * 0.5D, h * 0.5D, w * 0.5D);
+            net.minecraft.util.math.RayTraceResult hit =
+                    doubled.calculateIntercept(eye, end);
+            if (hit == null) {
                 continue;
             }
-            nearby.attackEntityFrom(DamageSource.causePlayerDamage(attacker), damage);
+            double dist = eye.distanceTo(hit.hitVec);
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = target;
+            }
+        }
+        if (best == null) {
+            return;
+        }
+        float strength = attacker.getCooledAttackStrength(0.5F);
+        float damage = (float) attacker.getEntityAttribute(
+                SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue()
+                + EnchantmentHelper.getModifierForCreature(maceStack,
+                        best.getCreatureAttribute());
+        damage *= 0.2F + strength * strength * 0.8F;
+        if (isVanillaCrit(attacker, best)) {
+            damage *= 1.5F;
+        }
+        if (best.attackEntityFrom(DamageSource.causePlayerDamage(attacker), damage)) {
+            maceStack.damageItem(1, attacker);
+            if (isVanillaCrit(attacker, best)) {
+                attacker.world.playSound(null, attacker.posX, attacker.posY, attacker.posZ,
+                        SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+                if (attacker.world instanceof WorldServer) {
+                    ((WorldServer) attacker.world).spawnParticle(EnumParticleTypes.CRIT,
+                            best.posX, best.posY + best.height * 0.5D, best.posZ,
+                            8, 0.3D, 0.3D, 0.3D, 0.2D);
+                }
+            }
         }
     }
 
@@ -482,6 +569,7 @@ public class CombatHandler {
             WIND_BURSTS.remove(event.player.getUniqueID());
             SMASH_IMPACTS.remove(event.player.getUniqueID());
             LAST_LAND.remove(event.player.getUniqueID());
+            SWINGS.remove(event.player.getUniqueID());
         }
     }
 

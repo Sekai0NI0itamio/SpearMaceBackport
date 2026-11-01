@@ -79,8 +79,10 @@
 - [x] Predicate keys on rendered entity being a player (exact modern display_context mapping); no stack/world checks — evidence: green build 41269158192
 - [x] Green cloud build publishes non-empty jar (run 41269158192 `success`); local 1.1.10 jar downloaded; user confirms hand = long art
 
-## v1.1.11 change set (2026-11-01) — status: done, green build 41270223146
+## v1.1.11 change set (2026-11-01) — status: superseded by 1.1.12 (green build 41270223146; sweep rejected by user, grace kept)
 
-- [x] Landing grace 0.5s -> 1.0s for smash trigger — evidence: green build 41270223146
-- [x] Mace sweep: full hit damage to other hittable mobs within 2 blocks of the victim — evidence: green build 41270223146
-- [x] Green cloud build publishes non-empty jar (run 41270223146 `success`); local 1.1.11 jar downloaded; user confirms easier mace hits
+## v1.1.12 change set (2026-11-01) — status: in progress
+
+- [ ] Landing grace 1.0s for smash trigger (kept from 1.1.11)
+- [ ] Mace hit-assist replaces the rejected sweep: whiffed mace swings re-check with doubled mob boxes (wall-checked, meter-scaled, crit-aware)
+- [ ] Green cloud build publishes non-empty jar; user confirms easier mace hits
