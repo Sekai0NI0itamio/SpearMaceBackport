@@ -484,6 +484,12 @@ public class CombatHandler {
                         first.posX, first.posY + first.height * 0.5D, first.posZ,
                         2, 0.3D, 0.3D, 0.3D, 0.0D);
             }
+        } else {
+            // Whiffed (dead zone, wall, or out of reach): swing + soft whoosh
+            // so the jab always reads, exactly like the modern swing.
+            player.swingArm(event.getHand());
+            player.world.playSound(null, player.posX, player.posY, player.posZ,
+                    SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.4F, 1.2F);
         }
         event.setCanceled(true);
     }
