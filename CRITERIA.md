@@ -59,7 +59,7 @@
 - [x] Landing grace: smash fires within 0.5s of landing a 1.5+ fall (deliberate forgiveness deviation, uses recorded fall distance) — evidence: green build 41263647881
 - [x] Green cloud build publishes non-empty jar (run 41263647881 `success`); local 1.1.6 jar downloaded
 
-## v1.1.7 change set (2026-11-01) — status: in progress
+## v1.1.7 change set (2026-11-01) — status: done, green build 41264713721
 
-- [ ] Held-spear render fixed by removing the backwards override: single long-art model, vanilla sword grip everywhere
-- [ ] Green cloud build publishes non-empty jar; user retests held render + jab (byte-size self-check included)
+- [x] Held-spear render fixed by removing the backwards override: single long-art model, vanilla sword grip everywhere — evidence: green build 41264713721, jar model 1096 bytes, no in_hand files
+- [x] Green cloud build publishes non-empty jar (run 41264713721 `success`); local 1.1.7 jar downloaded (47045 bytes)
