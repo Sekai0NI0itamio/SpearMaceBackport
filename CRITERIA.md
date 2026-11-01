@@ -74,7 +74,7 @@
 - [x] Register diamond_spear_in_hand via registerItemVariants (the vanilla bow_pulling requirement); override can now actually load — evidence: green build 41268540779
 - [x] Green cloud build publishes non-empty jar (run 41268540779 `success`); local 1.1.9 jar downloaded; held render still short -> predicate must key on entity, not world
 
-## v1.1.10 change set (2026-11-01) — status: in progress
+## v1.1.10 change set (2026-11-01) — status: done, green build 41269158192
 
-- [ ] Predicate keys on rendered entity being a player (exact modern display_context mapping); no stack/world checks
-- [ ] Green cloud build publishes non-empty jar; user confirms hand = long art
+- [x] Predicate keys on rendered entity being a player (exact modern display_context mapping); no stack/world checks — evidence: green build 41269158192
+- [x] Green cloud build publishes non-empty jar (run 41269158192 `success`); local 1.1.10 jar downloaded; user confirms hand = long art
