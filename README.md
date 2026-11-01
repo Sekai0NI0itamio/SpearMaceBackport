@@ -31,13 +31,12 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   dispensers can fire it too.
 - **Breeze Rod** (creative-only) — repair material for the mace.
 - **Diamond Spear** (craftable — the only survival recipe, official Mojang
-  recipe) — official Mojang art both ways: the 16×16 icon in inventory,
-  the 32×32 held art (vanilla sword-style grip) in hand. The split is a
-  render-context switch — GUIs render items with no world (short icon),
-  the hand renders with a live world (long art) — so it cannot flip. (1.12.2
-  also requires override-only models to be registered via
-  registerItemVariants, like vanilla's bow-pulling models — without that the
-  override is silently dead.)
+  recipe) — official Mojang art both ways, replicating modern's
+  display_context select exactly: the 16×16 icon for inventory, drops and
+  frames, the 32×32 held art (vanilla sword-style grip) whenever a player
+  holds or wears it. The switch keys on the rendered entity being a player
+  — no stack comparison (1.12.2's hand renderer holds a value-equal copy)
+  and no world check (the 1.12.2 hand path passes a null world).
   Melee swings work like a sword at 4 damage
   with a hard 2-block dead zone and never crit. Right-click jab hits everything in a 2–4.5
   block wall-checked line, scaling with the attack meter exactly like a

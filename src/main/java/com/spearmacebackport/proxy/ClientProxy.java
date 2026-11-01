@@ -6,6 +6,7 @@ import com.spearmacebackport.item.ModItems;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.client.renderer.entity.RenderSnowball;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.ModelRegistryEvent;
@@ -22,13 +23,15 @@ public class ClientProxy extends CommonProxy {
     @Override
     public void preInit(FMLPreInitializationEvent event) {
         super.preInit(event);
-        // Render-context switch, not held-item detection: GUIs render items
-        // with a null world (short icon); the hand and the world render with
-        // a live world (long held art). No entity comparison, so it cannot
-        // evaluate backwards the way the stack-identity check did.
+        // Exact replica of modern's display_context select (gui/ground/fixed
+        // -> short icon, everything else -> long held art): the rendered
+        // entity is only ever a player when a player holds/wears the spear,
+        // and null in GUIs. No stack comparison (the renderer may hold a
+        // value-equal copy) and no world check (the hand path passes a null
+        // world in 1.12.2, which is why the world-based predicate failed).
         ModItems.DIAMOND_SPEAR.addPropertyOverride(
                 new ResourceLocation(SpearMaceBackportMod.MOD_ID, "in_hand"),
-                (stack, world, entity) -> world != null ? 1.0F : 0.0F);
+                (stack, world, entity) -> entity instanceof EntityPlayer ? 1.0F : 0.0F);
         RenderingRegistry.registerEntityRenderingHandler(EntityWindCharge.class,
                 manager -> new RenderSnowball<EntityWindCharge>(manager,
                         ModItems.WIND_CHARGE, Minecraft.getMinecraft().getRenderItem()));
