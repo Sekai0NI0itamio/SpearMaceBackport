@@ -2,5 +2,13 @@
   "parent": "minecraft:item/generated",
   "textures": {
     "layer0": "spearmacebackport:items/diamond_spear"
-  }
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "spearmacebackport:in_hand": 1.0
+      },
+      "model": "spearmacebackport:item/diamond_spear_in_hand"
+    }
+  ]
 }

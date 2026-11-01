@@ -66,5 +66,5 @@
 
 ## v1.1.8 change set (2026-11-01) — status: in progress
 
-- [ ] Perspective wrapper: short icon for GUI/GROUND/FIXED, long art for first/third person (no held-detection predicates)
+- [ ] Dual-art via render-context switch (world null = short icon, world live = long held art); dead perspective code removed
 - [ ] Green cloud build publishes non-empty jar; user confirms inventory icon + held render
