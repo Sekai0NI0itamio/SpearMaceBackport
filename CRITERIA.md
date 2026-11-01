@@ -64,7 +64,7 @@
 - [x] Held-spear render fixed by removing the backwards override: single long-art model, vanilla sword grip everywhere — evidence: green build 41264713721, jar model 1096 bytes, no in_hand files
 - [x] Green cloud build publishes non-empty jar (run 41264713721 `success`); local 1.1.7 jar downloaded (47045 bytes)
 
-## v1.1.8 change set (2026-11-01) — status: in progress
+## v1.1.8 change set (2026-11-01) — status: done, green build 41266294075
 
-- [ ] Dual-art via render-context switch (world null = short icon, world live = long held art); dead perspective code removed
-- [ ] Green cloud build publishes non-empty jar; user confirms inventory icon + held render
+- [x] Dual-art via render-context switch (world null = short icon, world live = long held art); dead perspective code removed — evidence: green build 41266294075, both models + PNGs in jar
+- [x] Green cloud build publishes non-empty jar (run 41266294075 `success`); local 1.1.8 jar downloaded; user confirms inventory icon + held render
