@@ -12,8 +12,11 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   for the next 5, +1 beyond, vertical momentum reset, landing only counts
   fall damage below the smash height, and the official knockback formula
   within 3.5 blocks (fixed +0.7 lift, doubled past 5 fallen blocks). Forgiveness
-  rule (deliberate deviation from vanilla): landing within 0.5s of a 1.5+
-  fall still smashes, so late clicks are not lost. Successful smashes burst modern-style particles: an explosion flash plus
+  rule (deliberate deviation from vanilla): landing within 1.0s of a 1.5+
+  fall still smashes, so late clicks are not lost. Mace hits also sweep:
+  every other hittable mob within 2 blocks of your target takes the full
+  hit (deliberate deviation, no vanilla equivalent — crowds melt).
+  Successful smashes burst modern-style particles: an explosion flash plus
   block-dust of the block under a grounded victim, and landing dust when
   you touch down. Enchants via anvil: **Density** (+0.5/block/level,
   max 5), **Breach** (−15% armor effectiveness/level, max 4),

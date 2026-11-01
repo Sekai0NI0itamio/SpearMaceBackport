@@ -78,3 +78,9 @@
 
 - [x] Predicate keys on rendered entity being a player (exact modern display_context mapping); no stack/world checks — evidence: green build 41269158192
 - [x] Green cloud build publishes non-empty jar (run 41269158192 `success`); local 1.1.10 jar downloaded; user confirms hand = long art
+
+## v1.1.11 change set (2026-11-01) — status: in progress
+
+- [ ] Landing grace 0.5s -> 1.0s for smash trigger
+- [ ] Mace sweep: full hit damage to other hittable mobs within 2 blocks of the victim
+- [ ] Green cloud build publishes non-empty jar; user confirms easier mace hits

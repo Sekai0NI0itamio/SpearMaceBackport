@@ -60,7 +60,8 @@ import java.util.UUID;
  * >1.5, cooldown ignored per MC-270160), Density +0.5/block/level, Breach -15%
  * armor effectiveness/level, Wind Burst is a 3.5-radius explosion at the
  * attacker (multipliers 1.2/1.75/2.2, no fall protection); intentional
- * forgiveness deviation: landing within 0.5s of a 1.5+ fall still smashes.
+ * forgiveness deviations: landing within 1.0s of a 1.5+ fall still
+ * smashes, and every mace hit sweeps full damage to nearby mobs.
  * Smash knocks back within 3.5 blocks with the
  * official (3.5-dist) x 0.7 x high-fall-double formula and a fixed +0.7 lift,
  * smash resets vertical momentum to 0.01 and records the impact height so
@@ -216,8 +217,11 @@ public class CombatHandler {
                     && memory.victimId == event.getEntityLiving().getEntityId()) {
                 event.setAmount(event.getAmount() + memory.damage);
             }
-        } else if (breach > 0) {
-            applyBreach(event, breach);
+        } else {
+            if (breach > 0) {
+                applyBreach(event, breach);
+            }
+            sweepMace(attacker, event.getEntityLiving(), event.getAmount());
         }
     }
 
@@ -252,9 +256,31 @@ public class CombatHandler {
         }
         smashKnockback(attacker, event.getEntityLiving(), fallen);
         spawnSmashParticles(attacker, event.getEntityLiving(), fallen);
+        sweepMace(attacker, event.getEntityLiving(), event.getAmount());
         attacker.fallDistance = 0.0F;
         if (damageMace) {
             maceStack.damageItem(1, attacker);
+        }
+    }
+
+    /**
+     * Forgiveness sweep (deliberate deviation, no vanilla equivalent): a mace
+     * hit also lands its full damage on every other hittable mob within 2
+     * blocks of the victim, so crowds and near-misses stop mattering.
+     */
+    private static void sweepMace(EntityPlayer attacker, EntityLivingBase victim, float damage) {
+        if (damage <= 0.0F) {
+            return;
+        }
+        for (EntityLivingBase nearby : attacker.world.getEntitiesWithinAABB(EntityLivingBase.class,
+                attacker.getEntityBoundingBox().grow(4.0D))) {
+            if (isSmashImmune(attacker, victim, nearby)) {
+                continue;
+            }
+            if (nearby.getDistance(victim) > 2.0F) {
+                continue;
+            }
+            nearby.attackEntityFrom(DamageSource.causePlayerDamage(attacker), damage);
         }
     }
 
@@ -370,11 +396,11 @@ public class CombatHandler {
             return true;
         }
         // Intentional forgiveness deviation from vanilla: landing within the
-        // last 0.5s after a 1.5+ block fall still smashes, so clicks that
-        // land a tick late are not lost.
+        // last 1.0s after a 1.5+ block fall still smashes, so clicks that
+        // land late are not lost.
         LandRecord land = LAST_LAND.get(attacker.getUniqueID());
         return attacker.onGround && land != null
-                && attacker.world.getTotalWorldTime() - land.time < 10L
+                && attacker.world.getTotalWorldTime() - land.time < 20L
                 && land.distance > 1.5F;
     }
 
