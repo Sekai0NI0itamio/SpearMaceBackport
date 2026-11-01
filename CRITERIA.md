@@ -48,7 +48,7 @@
 - [x] Auto-swap: falling smash with non-mace/non-spear held fires first inventory mace's smash package (bonus, Breach, Wind Burst, knockback, particles, fall protection) for 1 mace durability — evidence: green build 41260219926
 - [x] Green cloud build publishes non-empty jar (run 41260219926 `success`); local 1.1.4 jar downloaded; lunge diagnosis: anvil Lunge, grounded, jab, zero feedback -> jab itself silent
 
-## v1.1.5 change set (2026-11-01) — status: in progress
+## v1.1.5 change set (2026-11-01) — status: done, green build 41261852880
 
-- [ ] Whiffed jabs (dead zone / wall / out of reach) now swing + soft whoosh instead of total silence, matching the modern always-swing
-- [ ] Green cloud build publishes non-empty jar; user retests lunge at exact 3-block grounded full-meter jab
+- [x] Whiffed jabs (dead zone / wall / out of reach) now swing + soft whoosh instead of total silence, matching the modern always-swing — evidence: green build 41261852880
+- [x] Green cloud build publishes non-empty jar (run 41261852880 `success`); local 1.1.5 jar downloaded; user retests lunge at exact 3-block grounded full-meter jab
