@@ -57,4 +57,9 @@
 
 - [x] Jab dispatch migrated from the interact event to the item's own right-click (proven server path); user confirmed 1.1.5 + silent right-click = event path dead — evidence: green build 41263647881
 - [x] Landing grace: smash fires within 0.5s of landing a 1.5+ fall (deliberate forgiveness deviation, uses recorded fall distance) — evidence: green build 41263647881
-- [x] Green cloud build publishes non-empty jar (run 41263647881 `success`); local 1.1.6 jar downloaded; user retests jab + smash timing; held-spear screenshot requested
+- [x] Green cloud build publishes non-empty jar (run 41263647881 `success`); local 1.1.6 jar downloaded
+
+## v1.1.7 change set (2026-11-01) — status: in progress
+
+- [ ] Held-spear render fixed by removing the backwards override: single long-art model, vanilla sword grip everywhere
+- [ ] Green cloud build publishes non-empty jar; user retests held render + jab (byte-size self-check included)
