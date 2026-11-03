@@ -267,16 +267,21 @@ public class CombatHandler {
 
     /**
      * Mace hit-assist (deliberate deviation, no vanilla equivalent): mob
-     * hitboxes are doubled while you hold a mace, so near-miss clicks land.
-     * Missed swings never reach the server, but the swing animation does, so
-     * a fresh swing with no landed hit within 4 ticks runs a generous
-     * raycast (2x boxes, wall-checked) and lands the mace hit directly.
+     * hitboxes count triple while you hold a mace, so clean visual misses
+     * still land. Missed swings never reach the server, but the swing
+     * animation does, so every click (single or spam) with no landed hit
+     * within 3 ticks runs a generous raycast on the click-time aim
+     * (3x boxes, wall-checked) and lands the mace hit directly.
      */
     private static final class SwingWatch {
         boolean wasSwinging;
+        int prevProgress;
         long swingStartTick;
         long assistTick = -1L;
+        long hitTickAtClick = -1L;
         long lastHitTick = -1L;
+        net.minecraft.util.math.Vec3d swingEye;
+        net.minecraft.util.math.Vec3d swingLook;
     }
 
     private static final Map<UUID, SwingWatch> SWINGS = new HashMap<>();
@@ -290,31 +295,46 @@ public class CombatHandler {
         EntityPlayer player = (EntityPlayer) event.player;
         SwingWatch watch = SWINGS.computeIfAbsent(player.getUniqueID(), k -> new SwingWatch());
         boolean swinging = player.isSwingInProgress;
-        if (swinging && !watch.wasSwinging) {
+        int progress = player.swingProgressInt;
+        if (swinging && (!watch.wasSwinging || progress < watch.prevProgress)) {
+            // Fresh click: rising edge for single swings, progress reset for
+            // spam clicks (the flag never drops between rapid swings).
+            // Snapshot the aim now so falling hits don't drift.
             watch.swingStartTick = player.world.getTotalWorldTime();
-            watch.assistTick = watch.swingStartTick + 4L;
+            watch.assistTick = watch.swingStartTick + 3L;
+            watch.hitTickAtClick = watch.lastHitTick;
+            watch.swingEye = player.getPositionEyes(1.0F);
+            watch.swingLook = player.getLook(1.0F);
         }
         watch.wasSwinging = swinging;
+        watch.prevProgress = progress;
         if (watch.assistTick >= 0L
                 && player.world.getTotalWorldTime() >= watch.assistTick) {
             watch.assistTick = -1L;
-            if (watch.lastHitTick <= watch.swingStartTick) {
+            if (watch.lastHitTick == watch.hitTickAtClick
+                    && watch.swingEye != null && watch.swingLook != null) {
                 ItemStack held = player.getHeldItemMainhand();
                 if (held.isEmpty() || !(held.getItem() instanceof ItemMace)) {
                     held = player.getHeldItemOffhand();
                 }
                 if (!held.isEmpty() && held.getItem() instanceof ItemMace) {
-                    assistMaceHit(player, held);
+                    assistMaceHit(player, held, watch.swingEye, watch.swingLook);
                 }
             }
         }
     }
 
-    private static void assistMaceHit(EntityPlayer attacker, ItemStack maceStack) {
-        double reach = Math.min(3.5D,
-                blockLimitedReach(attacker, ItemDiamondSpear.MAX_REACH));
-        Vec3d eye = attacker.getPositionEyes(1.0F);
-        Vec3d end = eye.add(attacker.getLook(1.0F).scale(reach));
+    private static void assistMaceHit(EntityPlayer attacker, ItemStack maceStack,
+            Vec3d eye, Vec3d look) {
+        // Tripled mob boxes: a zombie reads ~1.8 blocks wide, so clean
+        // visual misses still connect. Wall-checked like vanilla.
+        RayTraceResult wall = attacker.world.rayTraceBlocks(eye,
+                eye.add(look.scale(3.5D)), false, true, false);
+        double reach = 3.5D;
+        if (wall != null && wall.typeOfHit == RayTraceResult.Type.BLOCK) {
+            reach = Math.min(reach, eye.distanceTo(wall.hitVec));
+        }
+        Vec3d end = eye.add(look.scale(reach));
         EntityLivingBase best = null;
         double bestDist = Double.MAX_VALUE;
         for (EntityLivingBase target : attacker.world.getEntitiesWithinAABB(EntityLivingBase.class,
@@ -333,9 +353,9 @@ public class CombatHandler {
             AxisAlignedBB box = target.getEntityBoundingBox();
             double w = Math.max(box.maxX - box.minX, box.maxZ - box.minZ);
             double h = box.maxY - box.minY;
-            AxisAlignedBB doubled = box.grow(w * 0.5D, h * 0.5D, w * 0.5D);
+            AxisAlignedBB tripled = box.grow(w, h, w);
             net.minecraft.util.math.RayTraceResult hit =
-                    doubled.calculateIntercept(eye, end);
+                    tripled.calculateIntercept(eye, end);
             if (hit == null) {
                 continue;
             }

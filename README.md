@@ -14,9 +14,10 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   within 3.5 blocks (fixed +0.7 lift, doubled past 5 fallen blocks). Forgiveness
   rule (deliberate deviation from vanilla): landing within 1.0s of a 1.5+
   fall still smashes, so late clicks are not lost. Mace hit-assist: mob
-  hitboxes count double while you hold a mace, so near-miss clicks land
-  anyway (deliberate deviation — missed swings never reach the server, so a
-  whiffed swing re-checks with 2x boxes a few ticks later). Successful
+  hitboxes count triple while you hold a mace, so clean visual misses land
+  anyway — every click (including spam, including mid-air) re-checks on the
+  click-time aim a few ticks later (deliberate deviation — missed swings
+  never reach the server, so a whiffed swing lands the hit itself). Successful
   smashes burst modern-style particles: an explosion flash plus
   block-dust of the block under a grounded victim, and landing dust when
   you touch down. Enchants via anvil: **Density** (+0.5/block/level,
