@@ -90,4 +90,9 @@
 ## v1.1.13 change set (2026-11-03) — status: done, green build 41619001035
 
 - [x] Assist re-arms on every click (progress-reset detection for spam), snapshots click-time aim, tripled boxes, 3-tick window — evidence: green build 41619001035
-- [x] Green cloud build publishes non-empty jar (run 41619001035 `success`); local 1.1.13 jar downloaded; user confirms falling hits + spam + visual misses
+- [x] Green cloud build publishes non-empty jar (run 41619001035 `success`); local 1.1.13 jar downloaded; user still reports boxes not expanded -> true client-side doubling needed
+
+## v1.1.14 change set (2026-11-03) — status: in progress
+
+- [ ] Client-side true hitbox doubling (exactly 2x in 3D) while holding a mace; restore-before-move so collision is unaffected
+- [ ] Green cloud build publishes non-empty jar; user confirms clicks land on visual misses

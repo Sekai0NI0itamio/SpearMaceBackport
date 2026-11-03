@@ -13,11 +13,11 @@ sword hit and the mace smash with no vanilla attribute-swapping.
   fall damage below the smash height, and the official knockback formula
   within 3.5 blocks (fixed +0.7 lift, doubled past 5 fallen blocks). Forgiveness
   rule (deliberate deviation from vanilla): landing within 1.0s of a 1.5+
-  fall still smashes, so late clicks are not lost. Mace hit-assist: mob
-  hitboxes count triple while you hold a mace, so clean visual misses land
-  anyway — every click (including spam, including mid-air) re-checks on the
-  click-time aim a few ticks later (deliberate deviation — missed swings
-  never reach the server, so a whiffed swing lands the hit itself). Successful
+  fall still smashes, so late clicks are not lost. Doubled hitboxes: while
+  you hold a mace, every mob's box is exactly 2x in all three dimensions
+  for click detection (true boxes are restored before each tick's movement,
+  so collision is unaffected). A server-side assist additionally catches
+  whiffed swings (spam, mid-air) with tripled boxes on the click-time aim. Successful
   smashes burst modern-style particles: an explosion flash plus
   block-dust of the block under a grounded victim, and landing dust when
   you touch down. Enchants via anvil: **Density** (+0.5/block/level,
