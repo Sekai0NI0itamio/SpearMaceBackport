@@ -87,7 +87,7 @@
 - [x] Mace hit-assist replaces the rejected sweep: whiffed mace swings re-check with doubled mob boxes (wall-checked, meter-scaled, crit-aware) — evidence: green build 41271182064
 - [x] Green cloud build publishes non-empty jar (run 41271182064 `success`); local 1.1.12 jar downloaded; user reports spam/falling still weak
 
-## v1.1.13 change set (2026-11-03) — status: in progress
+## v1.1.13 change set (2026-11-03) — status: done, green build 41619001035
 
-- [ ] Assist re-arms on every click (progress-reset detection for spam), snapshots click-time aim, tripled boxes, 3-tick window
-- [ ] Green cloud build publishes non-empty jar; user confirms falling hits + spam + visual misses
+- [x] Assist re-arms on every click (progress-reset detection for spam), snapshots click-time aim, tripled boxes, 3-tick window — evidence: green build 41619001035
+- [x] Green cloud build publishes non-empty jar (run 41619001035 `success`); local 1.1.13 jar downloaded; user confirms falling hits + spam + visual misses
