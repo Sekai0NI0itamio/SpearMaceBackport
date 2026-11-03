@@ -328,10 +328,11 @@ public class CombatHandler {
             Vec3d eye, Vec3d look) {
         // Tripled mob boxes: a zombie reads ~1.8 blocks wide, so clean
         // visual misses still connect. Wall-checked like vanilla.
-        RayTraceResult wall = attacker.world.rayTraceBlocks(eye,
+        net.minecraft.util.math.RayTraceResult wall = attacker.world.rayTraceBlocks(eye,
                 eye.add(look.scale(3.5D)), false, true, false);
         double reach = 3.5D;
-        if (wall != null && wall.typeOfHit == RayTraceResult.Type.BLOCK) {
+        if (wall != null
+                && wall.typeOfHit == net.minecraft.util.math.RayTraceResult.Type.BLOCK) {
             reach = Math.min(reach, eye.distanceTo(wall.hitVec));
         }
         Vec3d end = eye.add(look.scale(reach));
