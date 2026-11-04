@@ -1,7 +1,7 @@
 [
   {
-    "modid": "spearmacebackport",
-    "name": "MaceBackport",
+    "modid": "macebackport",
+    "name": "Mace Backport",
     "description": "Backport of the modern Mace (smash attack, Density/Breach/Wind Burst) and Wind Charges to 1.12.2, with a 1s easy-swap dual-hit window and doubled hitboxes while holding a mace.",
     "version": "${version}",
     "mcversion": "${mcversion}",

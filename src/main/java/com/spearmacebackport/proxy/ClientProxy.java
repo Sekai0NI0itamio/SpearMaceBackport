@@ -23,7 +23,7 @@ import net.minecraftforge.fml.relauncher.Side;
 import java.util.HashMap;
 import java.util.Map;
 
-@Mod.EventBusSubscriber(modid = "spearmacebackport", value = Side.CLIENT)
+@Mod.EventBusSubscriber(modid = "macebackport", value = Side.CLIENT)
 public class ClientProxy extends CommonProxy {
 
     @Override

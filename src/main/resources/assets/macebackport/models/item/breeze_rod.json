@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "spearmacebackport:items/wind_charge"
+    "layer0": "macebackport:items/breeze_rod"
   }
 }

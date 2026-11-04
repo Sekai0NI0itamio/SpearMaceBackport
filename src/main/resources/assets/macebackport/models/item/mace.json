@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
   "textures": {
-    "layer0": "spearmacebackport:items/mace"
+    "layer0": "macebackport:items/mace"
   }
 }

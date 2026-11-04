@@ -11,8 +11,8 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 @Mod(modid = SpearMaceBackportMod.MOD_ID, name = SpearMaceBackportMod.NAME,
         version = SpearMaceBackportMod.VERSION, acceptedMinecraftVersions = "[1.12.2]")
 public class SpearMaceBackportMod {
-    public static final String MOD_ID = "spearmacebackport";
-    public static final String NAME = "MaceBackport";
+    public static final String MOD_ID = "macebackport";
+    public static final String NAME = "Mace Backport";
     public static final String VERSION = "1.2.0";
 
     @Mod.Instance(MOD_ID)

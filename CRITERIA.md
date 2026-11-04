@@ -1,4 +1,4 @@
-# Criteria: SpearMaceBackport (Forge 1.12.2) — verification log
+# Criteria: Mace Backport (Forge 1.12.2) — verification log
 
 - [x] Single Forge 1.12.2 mod (Java 8, ForgeGradle 2.3), Diamond Spear + Mace — evidence: run 41197261687 `success`, artifact `spearmacebackport-jar` 42191 bytes
 - [x] Mace engine values: base 6, speed 0.6, durability 500, breeze-rod repair; smash tiers +4/+2/+1 on full fall (triggers >=1.5, cooldown ignored per MC-270160, vanilla x1.5 crit applies by falling); Density +0.5/block/level (max 5); Breach true -15% armor/level via CombatRules, normal + smash (max 4); Wind Burst 8 blocks/level via integrated MC physics (motionY 1.289/1.873/2.349, max 3, treasure); 2.5-block AoE knockback (stronger past 5); Density/Breach/Smite/BoA mutually exclusive at anvil — evidence: peer-review + wiki engine docs cross-checked vs Mojang article (fall 2 -> 14, fall 9 -> 29)

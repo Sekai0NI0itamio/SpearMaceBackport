@@ -1,4 +1,4 @@
-# SpearMaceBackport (Forge 1.12.2)
+# Mace Backport (Forge 1.12.2)
 
 Backport of the modern **Mace**, **Wind Charge** and **Diamond Spear** to
 Minecraft 1.12.2, plus a 1-second **easy-swap** window that applies BOTH the
