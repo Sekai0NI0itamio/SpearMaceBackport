@@ -38,7 +38,7 @@ jobs:
           echo "=== build/libs ==="
           ls -la build/libs/ || (echo "build/libs missing: compilation did not produce output" && exit 1)
           JAR_FOUND=0
-          for jar in build/libs/spearmacebackport-*.jar; do
+          for jar in build/libs/macebackport-*.jar; do
             [ -e "$jar" ] || continue
             case "$jar" in
               *-sources.jar) echo "source jar: $jar ($(stat -c%s "$jar") bytes)" ;;
@@ -46,7 +46,7 @@ jobs:
                  test -s "$jar" || (echo "FAIL: mod JAR is empty: $jar" && exit 1) ;;
             esac
           done
-          [ "$JAR_FOUND" = "1" ] || (echo "FAIL: expected mod JAR build/libs/spearmacebackport-*.jar not found" && exit 1)
+          [ "$JAR_FOUND" = "1" ] || (echo "FAIL: expected mod JAR build/libs/macebackport-*.jar not found" && exit 1)
           echo "JAR validation passed."
 
       - name: Upload mod JAR
