@@ -12,14 +12,13 @@ public class ModEnchants {
     public static final Enchantment DENSITY = new EnchantmentDensity();
     public static final Enchantment BREACH = new EnchantmentBreach();
     public static final Enchantment WIND_BURST = new EnchantmentWindBurst();
-    public static final Enchantment LUNGE = new EnchantmentLunge();
 
     public static void init() {
     }
 
     @SubscribeEvent
     public static void onRegisterEnchants(RegistryEvent.Register<Enchantment> event) {
-        event.getRegistry().registerAll(DENSITY, BREACH, WIND_BURST, LUNGE);
+        event.getRegistry().registerAll(DENSITY, BREACH, WIND_BURST);
     }
 
     static EntityEquipmentSlot[] hand() {

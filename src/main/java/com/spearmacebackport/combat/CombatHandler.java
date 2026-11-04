@@ -3,7 +3,6 @@ package com.spearmacebackport.combat;
 import com.spearmacebackport.SpearMaceBackportMod;
 import com.spearmacebackport.enchant.ModEnchants;
 import com.spearmacebackport.entity.EntityWindCharge;
-import com.spearmacebackport.item.ItemDiamondSpear;
 import com.spearmacebackport.item.ItemMace;
 import com.spearmacebackport.item.ModItems;
 import net.minecraft.block.Block;
@@ -69,13 +68,10 @@ import java.util.UUID;
  * landing only counts fall damage below it. Wind Burst is a 3.5-radius
  * explosion at the attacker (multipliers 1.2/1.75/2.2, no fall protection);
  * wind-charge bursts protect players below the burst height the same way.
- * Diamond spear: jab 4 at 1.05s meter, range 2-4.5, hard 2-block dead zone,
- * never crits; charge is floor(closingSpeed x 1.075) + 4 + Sharpness with
- * 4.6/5.1 block/s gates; Lunge propels 0.458 blocks/tick/level on jab for
- * 1 durability + hunger. Easy-swap: a sword hit followed by a mace smash
+ * Easy-swap: a sword hit followed by a mace smash
  * within 1.0s applies BOTH hits without vanilla attribute swapping.
- * Auto-swap: falling past the smash threshold with any non-mace, non-spear
- * weapon fires the smash package of the first inventory mace (hotbar first)
+ * Auto-swap: falling past the smash threshold with any non-mace weapon
+ * fires the smash package of the first inventory mace (hotbar first)
  * on top of the held weapon's own hit, costing the mace 1 durability.
  * Backport limits (documented in README): no hold-to-charge
  * stages/dismount, single charge damage roll.
@@ -87,10 +83,6 @@ public class CombatHandler {
     private static final double BREACH_FRACTION_PER_LEVEL = 0.15D;
     private static final double[] WIND_BURST_MULTIPLIER = {0.0D, 1.2D, 1.75D, 2.2D};
     private static final double WIND_BURST_RADIUS = 3.5D;
-    private static final double CHARGE_DAMAGE_GATE = 4.6D;
-    private static final double CHARGE_KNOCKBACK_GATE = 5.1D;
-    private static final double DIAMOND_CHARGE_MULT = 1.075D;
-    private static final double LUNGE_BLOCKS_PER_TICK_PER_LEVEL = 0.458D;
 
     private static final Map<UUID, SwapMemory> LAST_SWORD_HIT = new HashMap<>();
     private static final Map<UUID, BurstRecord> WIND_BURSTS = new HashMap<>();
@@ -171,15 +163,13 @@ public class CombatHandler {
 
         if (held.getItem() instanceof ItemMace) {
             handleMaceHit(event, attacker, held);
-        } else if (held.getItem() instanceof ItemDiamondSpear) {
-            handleSpearMelee(event, attacker);
         } else if (isSmash(attacker)) {
-            // Auto-swap: falling past the smash threshold with any non-mace,
-            // non-spear weapon in hand fires the smash package of the first
-            // mace found in the inventory (hotbar first). The held weapon
-            // keeps its own hit; the mace contributes its smash bonus,
-            // Breach shred, Wind Burst, knockback, particles and fall
-            // protection, and takes 1 durability.
+            // Auto-swap: falling past the smash threshold with any non-mace
+            // weapon in hand fires the smash package of the first mace found
+            // in the inventory (hotbar first). The held weapon keeps its own
+            // hit; the mace contributes its smash bonus, Breach shred, Wind
+            // Burst, knockback, particles and fall protection, and takes 1
+            // durability.
             ItemStack mace = findMace(attacker);
             if (!mace.isEmpty()) {
                 applyMaceSmash(event, attacker, mace, smashFallen(attacker), true);
@@ -520,20 +510,6 @@ public class CombatHandler {
         return land != null ? land.distance : 0.0F;
     }
 
-    private static void handleSpearMelee(LivingHurtEvent event, EntityPlayer attacker) {
-        // Hard 2-block dead zone: the spear cannot touch anything closer.
-        if (attacker.getDistance(event.getEntityLiving()) < ItemDiamondSpear.MIN_REACH) {
-            event.setAmount(0.0F);
-            event.setCanceled(true);
-            return;
-        }
-        // Spears never land critical hits (MC-302782, Works As Intended):
-        // strip the x1.5 vanilla applies to a falling attack.
-        if (isVanillaCrit(attacker, event.getEntityLiving())) {
-            event.setAmount(event.getAmount() * (1.0F / 1.5F));
-        }
-    }
-
     private static boolean isVanillaCrit(EntityPlayer attacker, EntityLivingBase target) {
         return attacker.fallDistance > 0.0F && !attacker.onGround && !attacker.isOnLadder()
                 && !attacker.isInWater() && !attacker.isPotionActive(MobEffects.BLINDNESS)
@@ -594,151 +570,6 @@ public class CombatHandler {
         }
     }
 
-    /**
-     * Spear jab, invoked from the item's own right-click dispatch (which is
-     * proven to reach the server) rather than the interact event.
-     */
-    public static void performSpearJab(EntityPlayer player, ItemStack held, EnumHand hand) {
-        if (held.isEmpty() || !(held.getItem() instanceof ItemDiamondSpear)) {
-            return;
-        }
-        // The jab scales with the attack meter exactly like a vanilla swing
-        // (0.2 + strength^2 x 0.8): spam-clicks land weak stabs, a full meter
-        // lands the full 4. A fully charged swing is NOT required.
-        float strength = player.getCooledAttackStrength(0.5F);
-        float meterScale = 0.2F + strength * strength * 0.8F;
-        double reach = blockLimitedReach(player, ItemDiamondSpear.MAX_REACH);
-        List<EntityLivingBase> targets = raycastLiving(player, reach);
-        if (targets.isEmpty()) {
-            return;
-        }
-        double closing = closingSpeed(player, targets.get(0));
-        boolean charge = closing >= CHARGE_DAMAGE_GATE;
-        float sharp = EnchantmentHelper.getModifierForCreature(held,
-                targets.get(0).getCreatureAttribute());
-        boolean hurtAny = false;
-        for (EntityLivingBase target : targets) {
-            if (player.getDistance(target) < ItemDiamondSpear.MIN_REACH) {
-                continue;
-            }
-            float damage;
-            if (charge) {
-                // Kinetic model: floor(closing speed x tier multiplier) + base + Sharpness.
-                damage = (float) Math.floor(closing * DIAMOND_CHARGE_MULT)
-                        + (float) ItemDiamondSpear.BASE_DAMAGE + sharp;
-                if (closing >= CHARGE_KNOCKBACK_GATE) {
-                    target.knockBack(player, 1.0F,
-                            player.posX - target.posX, player.posZ - target.posZ);
-                }
-            } else {
-                damage = ((float) ItemDiamondSpear.BASE_DAMAGE + sharp) * meterScale;
-            }
-            if (target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage)) {
-                hurtAny = true;
-            }
-        }
-        if (hurtAny) {
-            held.damageItem(1, player);
-            if (!charge) {
-                fireLunge(player, held);
-            }
-            // Spend the attack meter, mirroring a fully charged swing.
-            player.resetCooldown();
-            player.swingArm(hand);
-            EntityLivingBase first = targets.get(0);
-            player.world.playSound(null, first.posX, first.posY, first.posZ,
-                    SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 1.0F, 1.0F);
-            if (player.world instanceof WorldServer) {
-                ((WorldServer) player.world).spawnParticle(EnumParticleTypes.SWEEP_ATTACK,
-                        first.posX, first.posY + first.height * 0.5D, first.posZ,
-                        2, 0.3D, 0.3D, 0.3D, 0.0D);
-            }
-        } else {
-            // Whiffed (dead zone, wall, or out of reach): swing + soft whoosh
-            // so the jab always reads, exactly like the modern swing.
-            player.swingArm(hand);
-            player.world.playSound(null, player.posX, player.posY, player.posZ,
-                    SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.4F, 1.2F);
-        }
-    }
-
-    private static double closingSpeed(EntityPlayer player, EntityLivingBase target) {
-        Vec3d look = player.getLook(1.0F);
-        double attackerForward = player.motionX * look.x + player.motionY * look.y
-                + player.motionZ * look.z;
-        if (attackerForward < 0.0D) {
-            return 0.0D;
-        }
-        double relX = player.motionX - target.motionX;
-        double relY = player.motionY - target.motionY;
-        double relZ = player.motionZ - target.motionZ;
-        return Math.max(0.0D, (relX * look.x + relY * look.y + relZ * look.z) * 20.0D);
-    }
-
-    private static void fireLunge(EntityPlayer player, ItemStack held) {
-        int lunge = EnchantmentHelper.getEnchantmentLevel(ModEnchants.LUNGE, held);
-        if (lunge <= 0 || player.getRidingEntity() != null || player.isElytraFlying()
-                || player.isInWater()
-                || player.getFoodStats().getFoodLevel() < 7 && !player.capabilities.isCreativeMode) {
-            return;
-        }
-        Vec3d look = player.getLook(1.0F);
-        double horizontal = Math.sqrt(look.x * look.x + look.z * look.z);
-        if (horizontal < 1.0E-4D) {
-            return;
-        }
-        double speed = LUNGE_BLOCKS_PER_TICK_PER_LEVEL * lunge * (player.onGround ? 1.0D : 1.2D);
-        player.motionX = look.x / horizontal * speed;
-        player.motionZ = look.z / horizontal * speed;
-        player.velocityChanged = true;
-        held.damageItem(1, player);
-        player.addExhaustion(4.0F * lunge);
-        player.world.playSound(null, player.posX, player.posY, player.posZ,
-                SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.8F, 0.7F);
-    }
-
-    private static double blockLimitedReach(EntityPlayer player, double reach) {
-        Vec3d eye = player.getPositionEyes(1.0F);
-        Vec3d end = eye.add(player.getLook(1.0F).scale(reach));
-        net.minecraft.util.math.RayTraceResult hit =
-                player.world.rayTraceBlocks(eye, end, false, true, false);
-        if (hit != null && hit.typeOfHit == net.minecraft.util.math.RayTraceResult.Type.BLOCK) {
-            return Math.min(reach, eye.distanceTo(hit.hitVec));
-        }
-        return reach;
-    }
-
-    private static List<EntityLivingBase> raycastLiving(EntityPlayer player, double reach) {
-        Vec3d eye = player.getPositionEyes(1.0F);
-        Vec3d look = player.getLook(1.0F);
-        AxisAlignedBB box = player.getEntityBoundingBox().grow(reach);
-        List<Entity> entities = player.world.getEntitiesWithinAABBExcludingEntity(player, box);
-        List<EntityLivingBase> hits = new java.util.ArrayList<>();
-        for (Entity entity : entities) {
-            if (!(entity instanceof EntityLivingBase) || !entity.canBeCollidedWith()) {
-                continue;
-            }
-            AxisAlignedBB target = entity.getEntityBoundingBox();
-            Vec3d center = target.getCenter();
-            Vec3d toTarget = center.subtract(eye);
-            double along = toTarget.dotProduct(look);
-            if (along < 0.0D || along > reach) {
-                continue;
-            }
-            Vec3d closest = eye.add(look.scale(along));
-            double lateral = closest.distanceTo(center);
-            double allowed = Math.max(target.getAverageEdgeLength() * 0.5D + 0.125D, 0.6D);
-            if (lateral <= allowed) {
-                hits.add((EntityLivingBase) entity);
-            }
-        }
-        final Vec3d finalEye = eye;
-        hits.sort((a, b) -> Double.compare(
-                a.getEntityBoundingBox().getCenter().distanceTo(finalEye),
-                b.getEntityBoundingBox().getCenter().distanceTo(finalEye)));
-        return hits;
-    }
-
     @SubscribeEvent
     public static void onAnvil(AnvilUpdateEvent event) {
         ItemStack left = event.getLeft();
@@ -751,9 +582,8 @@ public class CombatHandler {
         if (book.isEmpty()) {
             return;
         }
-        boolean spear = left.getItem() instanceof ItemDiamondSpear;
         boolean mace = left.getItem() instanceof ItemMace;
-        if (!spear && !mace) {
+        if (!mace) {
             return;
         }
         ItemStack out = left.copy();
@@ -765,7 +595,6 @@ public class CombatHandler {
                 continue;
             }
             boolean allowed = ench.canApply(left)
-                    || (spear && isSpearAnvilEnchant(ench))
                     || (mace && isMaceAnvilEnchant(ench));
             if (allowed) {
                 int current = merged.containsKey(ench) ? merged.get(ench) : 0;
@@ -802,19 +631,6 @@ public class CombatHandler {
         return ench.getRegistryName() != null && id.equals(ench.getRegistryName().toString());
     }
 
-    private static boolean isSpearAnvilEnchant(Enchantment ench) {
-        return ench == ModEnchants.LUNGE
-                || (ench.getRegistryName() != null
-                && (ench.getRegistryName().toString().startsWith("minecraft:sharpness")
-                || ench.getRegistryName().toString().startsWith("minecraft:smite")
-                || ench.getRegistryName().toString().startsWith("minecraft:bane_of_arthropods")
-                || ench.getRegistryName().toString().startsWith("minecraft:fire_aspect")
-                || ench.getRegistryName().toString().startsWith("minecraft:looting")
-                || ench.getRegistryName().toString().startsWith("minecraft:knockback")
-                || ench.getRegistryName().toString().startsWith("minecraft:unbreaking")
-                || ench.getRegistryName().toString().startsWith("minecraft:mending")));
-    }
-
     private static boolean isMaceAnvilEnchant(Enchantment ench) {
         return ench == ModEnchants.DENSITY || ench == ModEnchants.BREACH
                 || ench == ModEnchants.WIND_BURST
@@ -836,9 +652,6 @@ public class CombatHandler {
         }
         LootPool pool = new LootPool(
                 new LootEntryItem[]{
-                        new LootEntryItem(ModItems.DIAMOND_SPEAR, 5, 0,
-                                new LootFunction[0], new LootCondition[0],
-                                SpearMaceBackportMod.MOD_ID + ":diamond_spear"),
                         new LootEntryItem(Items.ENCHANTED_BOOK, 3, 0,
                                 new LootFunction[]{new WindBurstBookFunction()},
                                 new LootCondition[0],

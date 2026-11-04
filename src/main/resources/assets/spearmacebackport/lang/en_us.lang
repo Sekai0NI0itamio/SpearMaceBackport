@@ -1,9 +1,7 @@
 item.spearmacebackport.mace.name=Mace
-item.spearmacebackport.diamond_spear.name=Diamond Spear
 item.spearmacebackport.wind_charge.name=Wind Charge
 item.spearmacebackport.breeze_rod.name=Breeze Rod
 entity.spearmacebackport.wind_charge.name=Wind Charge
 enchantment.spearmacebackport.density=Density
 enchantment.spearmacebackport.breach=Breach
 enchantment.spearmacebackport.wind_burst=Wind Burst
-enchantment.spearmacebackport.lunge=Lunge
